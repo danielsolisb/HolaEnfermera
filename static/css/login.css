@@ -1,0 +1,93 @@
+/* login.css */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Segoe UI', sans-serif;
+  }
+  
+  .login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #E72C2C;  /* Rojo del logo */
+    height: 100%;
+  }
+  
+  .login-box {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    padding: 2rem;
+    max-width: 360px;
+    width: 90%;
+    text-align: center;
+  }
+  /* daniel solis */
+  .login-logo {
+    max-width: 150px;
+    margin-bottom: 1.5rem;
+  }
+  
+  .error {
+    background: #ffcdd2;
+    color: #b71c1c;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .input-group {
+    margin-bottom: 1rem;
+  }
+  
+  .input-group .form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  
+  .btn-submit {
+    width: 100%;
+    padding: 0.75rem;
+    background: #E72C2C; /* mismo rojo */
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .btn-submit:hover {
+    background: #c62828;
+  }
+  
+  .signup-link {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .signup-link a {
+    color: #E72C2C;
+    text-decoration: none;
+  }
+  
+  .signup-link a:hover {
+    text-decoration: underline;
+  }
+  
+  /* Responsive más estrecho */
+  @media (max-width: 400px) {
+    .login-box {
+      padding: 1.5rem;
+    }
+    .login-logo {
+      max-width: 120px;
+      margin-bottom: 1rem;
+    }
+  }
+  

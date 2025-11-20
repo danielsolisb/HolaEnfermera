@@ -1,42 +1,53 @@
 from django.contrib import admin
-from .models import Appointment, AppointmentStatus, NurseSchedule
+from .models import Appointment, AppointmentStatus, AppointmentReminder
 
 @admin.register(AppointmentStatus)
 class AppointmentStatusAdmin(admin.ModelAdmin):
-    list_display = ('nombre',)
-
-@admin.register(NurseSchedule)
-class NurseScheduleAdmin(admin.ModelAdmin):
-    list_display = ('enfermero', 'dia_semana', 'hora_inicio', 'hora_fin')
+    list_display = ('nombre', 'descripcion')
 
 @admin.register(Appointment)
 class AppointmentAdmin(admin.ModelAdmin):
     list_display = (
-        'fecha', 'hora_inicio_servicio', 'paciente', 
-        'servicio', 'tipo_ubicacion', 'precio_final', 'estado'
+        'fecha', 'hora_inicio', 'hora_fin', 
+        'paciente_nombre', 'servicio', 'enfermero', 
+        'estado', 'precio_final'
     )
-    list_filter = ('estado', 'fecha', 'tipo_ubicacion')
-    search_fields = ('paciente__email', 'paciente__cedula')
-    readonly_fields = ('hora_fin_servicio', 'hora_salida_base', 'precio_final')
-
+    list_filter = ('estado', 'fecha', 'enfermero', 'servicio', 'tipo_ubicacion')
+    search_fields = ('paciente__first_name', 'paciente__last_name', 'paciente__email', 'paciente__cedula')
+    readonly_fields = ('hora_fin', 'precio_final')
+    
     fieldsets = (
-        ('Datos Principales', {
+        ('Datos de la Reserva', {
             'fields': ('paciente', 'servicio', 'enfermero', 'estado', 'creado_por')
         }),
         ('Agenda', {
-            'fields': ('fecha', 'hora_inicio_servicio', 'hora_fin_servicio', 'hora_salida_base')
+            'fields': ('fecha', 'hora_inicio', 'hora_fin')
         }),
         ('Ubicación del Servicio', {
             'fields': (
                 'tipo_ubicacion', 
                 'direccion_servicio', 
-                'referencia_servicio', 
+                'referencia_servicio',
                 'google_maps_link',
                 ('latitud', 'longitud')
             ),
-            'description': 'Si selecciona DOMICILIO, estos datos se llenarán solos al guardar.'
+            'description': 'Si selecciona DOMICILIO, estos datos se copiarán del paciente al guardar.'
         }),
-        ('Costos y Notas', {
-            'fields': ('cliente_tiene_insumos', 'precio_final', 'notas')
+        ('Facturación y Seguimiento', {
+            'fields': ('cliente_tiene_insumos', 'precio_final', 'es_reagendada')
         }),
+        ('Notas', {
+            'fields': ('notas',)
+        })
     )
+
+    def paciente_nombre(self, obj):
+        return f"{obj.paciente.first_name} {obj.paciente.last_name}"
+    paciente_nombre.short_description = 'Paciente'
+
+@admin.register(AppointmentReminder)
+class AppointmentReminderAdmin(admin.ModelAdmin):
+    list_display = ('paciente', 'servicio_sugerido', 'fecha_limite_sugerida', 'estado', 'enfermero_sugerido')
+    list_filter = ('estado', 'fecha_limite_sugerida', 'servicio_sugerido')
+    search_fields = ('paciente__email', 'paciente__cedula')
+    date_hierarchy = 'fecha_limite_sugerida'

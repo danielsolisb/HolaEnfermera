@@ -7,21 +7,27 @@ class ServiceCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'categoria', 'precio_base', 'duracion_minutos', 'es_guardia', 'activo')
-    list_filter = ('categoria', 'es_guardia', 'permite_domicilio', 'activo')
+    # Mostramos columnas clave para control rápido
+    list_display = (
+        'nombre', 'categoria', 'precio_base', 'duracion_horas', 
+        'es_guardia', 'requiere_retorno', 'activo'
+    )
+    list_filter = ('categoria', 'es_guardia', 'requiere_retorno', 'activo')
     search_fields = ('nombre',)
+    
+    # Organización visual para que no se olviden de llenar nada
     fieldsets = (
         ('Información Básica', {
             'fields': ('categoria', 'nombre', 'descripcion', 'activo')
         }),
-        ('Precios', {
+        ('Configuración de Precios', {
             'fields': ('precio_base', 'precio_insumos', 'incluye_insumos_por_defecto')
         }),
-        ('Tiempos y Logística', {
-            'fields': (('duracion_minutos', 'tiempo_traslado_minutos'), ('permite_local', 'permite_domicilio'))
+        ('Agenda y Tiempos', {
+            'fields': ('duracion_horas', 'es_guardia')
         }),
-        ('Configuración Especial', {
-            'fields': ('es_guardia', 'requiere_retorno', 'tiempo_espera_retorno'),
-            'classes': ('collapse',),
+        ('Lógica de Retorno (Sueros)', {
+            'fields': ('requiere_retorno', 'tiempo_espera_retorno'),
+            'description': 'Configuración para servicios que necesitan una segunda visita (sacada).'
         }),
     )

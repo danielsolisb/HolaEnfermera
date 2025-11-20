@@ -53,6 +53,11 @@ INSTALLED_APPS = [
     'CoreApps.services',
     'CoreApps.appointments',
     'CoreApps.notifications',
+    'CoreApps.main',
+    'CoreApps.scheduling',
+    'CoreApps.reports',
+    'CoreApps.chat',
+    'CoreApps.payments',
 ]
 
 MIDDLEWARE = [
@@ -66,6 +71,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
+
 
 TEMPLATES = [
     {
@@ -170,3 +176,8 @@ EMAIL_USE_TLS = True
 EMAIL_PORT = 587
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')      # <--- Cambio
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') # <--- Cambio
+
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'  # Ahora sí, al loguearse van al dashboard
+LOGOUT_REDIRECT_URL = 'login'
