@@ -47,7 +47,26 @@ class AppointmentAdmin(admin.ModelAdmin):
 
 @admin.register(AppointmentReminder)
 class AppointmentReminderAdmin(admin.ModelAdmin):
-    list_display = ('paciente', 'servicio_sugerido', 'fecha_limite_sugerida', 'estado', 'enfermero_sugerido')
-    list_filter = ('estado', 'fecha_limite_sugerida', 'servicio_sugerido')
-    search_fields = ('paciente__email', 'paciente__cedula')
-    date_hierarchy = 'fecha_limite_sugerida'
+    list_display = ('paciente', 'info_tratamiento', 'fecha_limite_sugerida', 'estado', 'origen')
+    list_filter = ('estado', 'origen', 'fecha_limite_sugerida')
+    search_fields = ('paciente__email', 'paciente__cedula', 'medicamento_externo')
+    date_hierarchy = 'fecha_creacion' # Cambiamos a fecha_creacion porque fecha_limite puede ser null
+    
+    fieldsets = (
+        ('Datos del Paciente', {
+            'fields': ('paciente', 'origen', 'estado')
+        }),
+        ('¿Qué necesita?', {
+            'fields': ('servicio_sugerido', 'medicamento_externo', 'notas'),
+            'description': 'Si es de la Web, "Servicio" estará vacío y "Medicamento" lleno. Usted debe asignar el Servicio real.'
+        }),
+        ('Agenda', {
+            'fields': ('fecha_limite_sugerida', 'enfermero_sugerido', 'cita_origen')
+        }),
+    )
+
+    def info_tratamiento(self, obj):
+        if obj.servicio_sugerido:
+            return obj.servicio_sugerido.nombre
+        return obj.medicamento_externo or "Sin especificar"
+    info_tratamiento.short_description = 'Tratamiento'

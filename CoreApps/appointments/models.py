@@ -28,6 +28,7 @@ class Appointment(models.Model):
     # Ubicación
     tipo_ubicacion = models.CharField(max_length=20, choices=UBICACION_CHOICES, default='DOMICILIO')
     direccion_servicio = models.TextField(blank=True)
+    referencia_servicio = models.TextField(blank=True, null=True)
     google_maps_link = models.URLField(max_length=500, blank=True, null=True)
     latitud = models.DecimalField(max_digits=15, decimal_places=10, null=True, blank=True)
     longitud = models.DecimalField(max_digits=15, decimal_places=10, null=True, blank=True)
@@ -81,8 +82,9 @@ class Appointment(models.Model):
 
 class AppointmentReminder(models.Model):
     """
-    El 'Post-it' inteligente. Se crea cuando un enfermero reporta 
-    que el paciente necesita una siguiente dosis.
+    El 'Post-it' inteligente. 
+    - Puede venir de una Cita (seguimiento de dosis).
+    - Puede venir de la Web (cliente nuevo pidiendo aviso).
     """
     ESTADOS = [
         ('PENDIENTE', 'Pendiente de Gestión'),
@@ -90,22 +92,77 @@ class AppointmentReminder(models.Model):
         ('AGENDADO', 'Convertido en Cita'),
         ('CANCELADO', 'Descartado'),
     ]
-
-    paciente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='recordatorios')
-    servicio_sugerido = models.ForeignKey(Service, on_delete=models.CASCADE, help_text="El servicio que toca (ej: Misma inyección)")
-    cita_origen = models.ForeignKey(Appointment, on_delete=models.SET_NULL, null=True, related_name='recordatorios_generados')
-    enfermero_sugerido = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='recordatorios_asignados')
     
-    fecha_limite_sugerida = models.DateField(help_text="Fecha ideal para la siguiente dosis")
+    # Nuevo campo para saber de dónde salió este dato
+    ORIGEN_CHOICES = [
+        ('SISTEMA', 'Generado por Cierre de Cita'),
+        ('WEB', 'Solicitud desde Landing Page'),
+    ]
+
+    paciente = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='recordatorios',
+        limit_choices_to={'rol': 'CLIENTE'}
+    )
+    
+    # --- CAMBIO 1: Hacemos el servicio opcional ---
+    # Antes: on_delete=models.CASCADE (obligatorio). 
+    # Ahora: null=True, blank=True.
+    servicio_sugerido = models.ForeignKey(
+        Service, 
+        on_delete=models.SET_NULL, # Si borran el servicio, no borramos el recordatorio
+        null=True, blank=True,     # <--- FLEXIBILIDAD: Permite que venga vacío de la web
+        help_text="El servicio que toca (ej: Misma inyección). Vacío si es solicitud externa."
+    )
+    
+    # --- CAMBIO 2: Nuevo campo para capturar "lo que el cliente escribió" ---
+    medicamento_externo = models.CharField(
+        max_length=200, 
+        blank=True, null=True,
+        help_text="Llenar solo si viene de la Web (ej: 'Neurobión', 'Vitamina C')."
+    )
+    
+    cita_origen = models.ForeignKey(
+        Appointment, 
+        on_delete=models.SET_NULL, 
+        null=True, blank=True, 
+        related_name='recordatorios_generados'
+    )
+    
+    enfermero_sugerido = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, blank=True, 
+        related_name='recordatorios_asignados'
+    )
+
+    # --- CAMBIO 3: Fecha opcional ---
+    # La dueña dijo: "Nosotros le ponemos el tiempo". Entonces puede nacer sin fecha.
+    fecha_limite_sugerida = models.DateField(
+        null=True, blank=True,  # <--- FLEXIBILIDAD
+        help_text="Fecha ideal para la siguiente dosis. Puede estar vacía al inicio."
+    )
+    
+    # Nuevo campo de control
+    origen = models.CharField(
+        max_length=20, 
+        choices=ORIGEN_CHOICES, 
+        default='SISTEMA',
+        help_text="Indica si fue automático (SISTEMA) o un Lead (WEB)."
+    )
+    
     estado = models.CharField(max_length=20, choices=ESTADOS, default='PENDIENTE')
     notas = models.TextField(blank=True)
-    
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = "Recordatorio de Dosis"
-        verbose_name_plural = "Recordatorios de Dosis"
-        ordering = ['fecha_limite_sugerida']
+        verbose_name = "Recordatorio / Lead"
+        verbose_name_plural = "Recordatorios y Leads"
+        ordering = ['fecha_limite_sugerida', '-fecha_creacion']
 
     def __str__(self):
-        return f"Recordar: {self.paciente} para {self.fecha_limite_sugerida}"
+        # Ajustamos el texto para que no se vea feo si falta la fecha o servicio
+        tema = self.servicio_sugerido.nombre if self.servicio_sugerido else (self.medicamento_externo or "General")
+        fecha = self.fecha_limite_sugerida or "Fecha por definir"
+        return f"[{self.get_origen_display()}] {self.paciente} - {tema} ({fecha})"
