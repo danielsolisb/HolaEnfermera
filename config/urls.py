@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     # 1. Rutas de Usuarios (Login/Logout)
@@ -29,8 +30,12 @@ urlpatterns = [
     # También las pegamos a la raíz.
     # 'main.urls' contiene el path('', ...) que atrapará la raíz si nadie más lo hizo antes.
     path('', include('CoreApps.main.urls')),
+    # Esto hace que las rutas queden como: 
+    # localhost:8000/citas/api/availability/
+    path('citas/', include('CoreApps.appointments.urls')),
 ]
-
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    # Agrega también esta línea para asegurar que busque en STATICFILES_DIRS si STATIC_ROOT está vacío
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

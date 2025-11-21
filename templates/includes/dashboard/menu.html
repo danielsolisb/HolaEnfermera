@@ -1,0 +1,101 @@
+{% load static %}
+<nav id="mainnav-container">
+    <div id="mainnav">
+        <div id="mainnav-menu-wrap">
+            <div class="nano">
+                <div class="nano-content">
+
+                    <div id="mainnav-profile" class="mainnav-profile">
+                        <div class="profile-wrap text-center">
+                            <div class="pad-btm">
+                                {% if user.foto %}
+                                <img class="img-circle img-md" src="{{ user.foto.url }}" alt="Perfil">
+                                {% else %}
+                                <img class="img-circle img-md" src="{% static 'img/profile-photos/user.png' %}"
+                                    alt="Perfil">
+                                {% endif %}
+                            </div>
+                            <a href="#profile-nav" class="box-block" data-toggle="collapse" aria-expanded="false">
+                                <p class="mnp-name">{{ user.get_full_name|default:user.email }}</p>
+                                <span class="mnp-desc">{{ user.get_rol_display }}</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <ul id="mainnav-menu" class="list-group">
+
+                        <li class="active-link">
+                            <a href="{% url 'dashboard' %}">
+                                <i class="demo-pli-home"></i>
+                                <span class="menu-title">Panel Principal</span>
+                            </a>
+                        </li>
+
+                        {% if user.is_staff %}
+                        <li class="list-header">Gestión</li>
+
+                        <li>
+                            <a href="#">
+                                <i class="fa fa-calendar"></i>
+                                <span class="menu-title">Agenda Global</span>
+                                <i class="arrow"></i>
+                            </a>
+                            <ul class="collapse">
+                                <li><a href="#">Ver Calendario</a></li>
+                                <li><a href="#">Nueva Cita Manual</a></li>
+                            </ul>
+                        </li>
+
+                        <li>
+                            <a href="#">
+                                <i class="fa fa-users"></i>
+                                <span class="menu-title">Usuarios</span>
+                                <i class="arrow"></i>
+                            </a>
+                            <ul class="collapse">
+                                <li><a href="#">Pacientes</a></li>
+                                <li><a href="#">Enfermeros</a></li>
+                            </ul>
+                        </li>
+
+                        {% if user.is_superuser %}
+                        <li>
+                            <a href="/admin/" target="_blank">
+                                <i class="fa fa-cogs"></i>
+                                <span class="menu-title">Configuración Técnica</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% endif %}
+
+                        {% if user.rol == 'ENFERMERO' %}
+                        <li class="list-header">Mi Trabajo</li>
+                        <li>
+                            <a href="#">
+                                <i class="fa fa-list-alt"></i>
+                                <span class="menu-title">Mis Citas Hoy</span>
+                                <span class="pull-right badge badge-warning">3</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#">
+                                <i class="fa fa-clock-o"></i>
+                                <span class="menu-title">Mi Disponibilidad</span>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <li class="list-divider"></li>
+
+                        <li>
+                            <a href="{% url 'logout' %}">
+                                <i class="fa fa-sign-out"></i>
+                                <span class="menu-title">Cerrar Sesión</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

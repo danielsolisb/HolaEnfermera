@@ -66,3 +66,40 @@ class Service(models.Model):
 
     def __str__(self):
         return f"{self.nombre} (${self.precio_base})"
+
+
+class Medication(models.Model):
+    """
+    Catálogo de Medicamentos para recordatorios automatizados.
+    Ej: Aclasta (Cada 1 Año), Prolia (Cada 6 Meses).
+    """
+    UNIDADES_TIEMPO = [
+        ('DIAS', 'Días'),
+        ('MESES', 'Meses'),
+        ('ANIOS', 'Años'),
+    ]
+
+    nombre = models.CharField(max_length=200, unique=True)
+    descripcion = models.TextField(blank=True)
+    
+    # --- NUEVA LÓGICA DE FRECUENCIA ---
+    frecuencia_valor = models.PositiveIntegerField(
+        _('Cada cuánto...'),
+        default=1,
+        help_text="Ej: 6 (para 6 meses), 1 (para 1 año)."
+    )
+    frecuencia_unidad = models.CharField(
+        _('Unidad de Tiempo'),
+        max_length=10,
+        choices=UNIDADES_TIEMPO,
+        default='MESES'
+    )
+    
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Medicamento (Catálogo)"
+        verbose_name_plural = "Catálogo de Medicamentos"
+
+    def __str__(self):
+        return f"{self.nombre} (Cada {self.frecuencia_valor} {self.get_frecuencia_unidad_display()})"

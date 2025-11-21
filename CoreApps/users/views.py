@@ -10,18 +10,22 @@ class CustomLoginView(LoginView):
     def get_success_url(self):
         """
         Lógica de redirección post-login:
-        1. Si es Superuser (Root) -> Va al Admin de Django.
-        2. Si es otro usuario -> Va a la página principal (Dashboard o Landing).
+        1. Superuser -> Admin de Django
+        2. Staff (Admin/Supervisor/Enfermero) -> Dashboard (Nifty)
+        3. Cliente -> Home (Landing Page)
         """
         user = self.request.user
         
+        # Si es Superusuario (Root), al admin técnico
         if user.is_superuser:
-            return '/admin/'  # Redirección directa al portal administrativo
+            return '/admin/'
             
-        # Aquí definiremos a dónde van los enfermeros/clientes. 
-        # Por ahora los mandamos a una ruta llamada 'home' (la crearemos luego).
-        return reverse_lazy('home') 
-
+        # Si es Staff o tiene rol de gestión, al Dashboard
+        if user.is_staff or user.rol in ['ADMINISTRADOR', 'SUPERVISOR', 'ENFERMERO']:
+            return reverse_lazy('dashboard')
+            
+        # Si es cliente normal, a la página principal
+        return reverse_lazy('home')
     def form_invalid(self, form):
         messages.error(self.request, "Usuario o contraseña incorrectos.")
         return super().form_invalid(form)

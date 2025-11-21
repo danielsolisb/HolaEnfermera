@@ -1,8 +1,10 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from datetime import datetime, timedelta
-from CoreApps.services.models import Service
+import calendar
+from CoreApps.services.models import Service, Medication
 
 class AppointmentStatus(models.Model):
     nombre = models.CharField(max_length=50, unique=True)
@@ -81,19 +83,13 @@ class Appointment(models.Model):
 
 
 class AppointmentReminder(models.Model):
-    """
-    El 'Post-it' inteligente. 
-    - Puede venir de una Cita (seguimiento de dosis).
-    - Puede venir de la Web (cliente nuevo pidiendo aviso).
-    """
+    # ... (ESTADOS, ORIGEN_CHOICES, FKs se mantienen igual) ...
     ESTADOS = [
         ('PENDIENTE', 'Pendiente de Gestión'),
         ('CONTACTADO', 'Cliente Contactado'),
         ('AGENDADO', 'Convertido en Cita'),
         ('CANCELADO', 'Descartado'),
     ]
-    
-    # Nuevo campo para saber de dónde salió este dato
     ORIGEN_CHOICES = [
         ('SISTEMA', 'Generado por Cierre de Cita'),
         ('WEB', 'Solicitud desde Landing Page'),
@@ -106,52 +102,25 @@ class AppointmentReminder(models.Model):
         limit_choices_to={'rol': 'CLIENTE'}
     )
     
-    # --- CAMBIO 1: Hacemos el servicio opcional ---
-    # Antes: on_delete=models.CASCADE (obligatorio). 
-    # Ahora: null=True, blank=True.
-    servicio_sugerido = models.ForeignKey(
-        Service, 
-        on_delete=models.SET_NULL, # Si borran el servicio, no borramos el recordatorio
-        null=True, blank=True,     # <--- FLEXIBILIDAD: Permite que venga vacío de la web
-        help_text="El servicio que toca (ej: Misma inyección). Vacío si es solicitud externa."
-    )
+    servicio_sugerido = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, blank=True)
     
-    # --- CAMBIO 2: Nuevo campo para capturar "lo que el cliente escribió" ---
-    medicamento_externo = models.CharField(
-        max_length=200, 
-        blank=True, null=True,
-        help_text="Llenar solo si viene de la Web (ej: 'Neurobión', 'Vitamina C')."
-    )
-    
-    cita_origen = models.ForeignKey(
-        Appointment, 
+    # --- Vínculo con el nuevo modelo de Medicamento ---
+    medicamento_catalogo = models.ForeignKey(
+        Medication, 
         on_delete=models.SET_NULL, 
-        null=True, blank=True, 
-        related_name='recordatorios_generados'
+        null=True, blank=True,
+        verbose_name="Medicamento (Catálogo)",
+        help_text="Si se selecciona, calcula la fecha usando Meses/Años."
     )
     
-    enfermero_sugerido = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, blank=True, 
-        related_name='recordatorios_asignados'
-    )
+    medicamento_externo = models.CharField(max_length=200, blank=True, null=True)
+    
+    cita_origen = models.ForeignKey('Appointment', on_delete=models.SET_NULL, null=True, blank=True, related_name='recordatorios_generados')
+    enfermero_sugerido = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='recordatorios_asignados')
 
-    # --- CAMBIO 3: Fecha opcional ---
-    # La dueña dijo: "Nosotros le ponemos el tiempo". Entonces puede nacer sin fecha.
-    fecha_limite_sugerida = models.DateField(
-        null=True, blank=True,  # <--- FLEXIBILIDAD
-        help_text="Fecha ideal para la siguiente dosis. Puede estar vacía al inicio."
-    )
+    fecha_limite_sugerida = models.DateField(null=True, blank=True)
     
-    # Nuevo campo de control
-    origen = models.CharField(
-        max_length=20, 
-        choices=ORIGEN_CHOICES, 
-        default='SISTEMA',
-        help_text="Indica si fue automático (SISTEMA) o un Lead (WEB)."
-    )
-    
+    origen = models.CharField(max_length=20, choices=ORIGEN_CHOICES, default='SISTEMA')
     estado = models.CharField(max_length=20, choices=ESTADOS, default='PENDIENTE')
     notas = models.TextField(blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -162,7 +131,31 @@ class AppointmentReminder(models.Model):
         ordering = ['fecha_limite_sugerida', '-fecha_creacion']
 
     def __str__(self):
-        # Ajustamos el texto para que no se vea feo si falta la fecha o servicio
-        tema = self.servicio_sugerido.nombre if self.servicio_sugerido else (self.medicamento_externo or "General")
-        fecha = self.fecha_limite_sugerida or "Fecha por definir"
-        return f"[{self.get_origen_display()}] {self.paciente} - {tema} ({fecha})"
+        tema = self.medicamento_catalogo.nombre if self.medicamento_catalogo else (self.medicamento_externo or "General")
+        fecha = self.fecha_limite_sugerida or "Sin fecha"
+        return f"{self.paciente} - {tema} ({fecha})"
+
+    def _add_months(self, source_date, months):
+        """Función auxiliar para sumar meses correctamente (evita errores de calendario)"""
+        month = source_date.month - 1 + months
+        year = source_date.year + month // 12
+        month = month % 12 + 1
+        day = min(source_date.day, calendar.monthrange(year, month)[1])
+        return source_date.replace(year=year, month=month, day=day)
+
+    def save(self, *args, **kwargs):
+        # AUTOMATIZACIÓN DE FECHA POR TIPO (DÍAS, MESES, AÑOS)
+        if not self.fecha_limite_sugerida and self.medicamento_catalogo:
+            valor = self.medicamento_catalogo.frecuencia_valor
+            unidad = self.medicamento_catalogo.frecuencia_unidad
+            
+            ahora = timezone.now().date()
+            
+            if unidad == 'DIAS':
+                self.fecha_limite_sugerida = ahora + timedelta(days=valor)
+            elif unidad == 'MESES':
+                self.fecha_limite_sugerida = self._add_months(ahora, valor)
+            elif unidad == 'ANIOS':
+                self.fecha_limite_sugerida = self._add_months(ahora, valor * 12)
+            
+        super().save(*args, **kwargs)
