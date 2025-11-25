@@ -69,3 +69,41 @@ class ServiceReport(models.Model):
                     notas=self.notas_seguimiento,
                     estado='PENDIENTE'
                 )
+
+class ServiceFeedback(models.Model):
+    """
+    NUEVO: Calificación de calidad que llena el CLIENTE.
+    Puede venir de un formulario público (Lead Huérfano) o post-cita.
+    """
+    ORIGEN_CHOICES = [
+        ('WEB_HUERFANO', 'Formulario Web (Lead)'),
+        ('APP_CLIENTE', 'App/Portal Cliente'),
+    ]
+
+    paciente = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='calificaciones_dadas',
+        limit_choices_to={'rol': 'CLIENTE'}
+    )
+    enfermero = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='calificaciones_recibidas',
+        limit_choices_to={'rol': 'ENFERMERO'},
+        help_text="Enfermero al que el cliente está calificando."
+    )
+    
+    rating = models.PositiveIntegerField(_('Calificación (1-5)'), default=5)
+    comentario = models.TextField(_('Comentario del Cliente'), blank=True)
+    
+    origen = models.CharField(max_length=20, choices=ORIGEN_CHOICES, default='WEB_HUERFANO')
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Calificación de Servicio"
+        verbose_name_plural = "Calificaciones (Feedback)"
+        ordering = ['-fecha_registro']
+
+    def __str__(self):
+        return f"{self.paciente} calificó a {self.enfermero}: {self.rating} estrellas"

@@ -1,6 +1,6 @@
 from django.urls import path
 from django.contrib.auth.views import LogoutView
-from .views import CustomLoginView
+from .views import CustomLoginView, PublicNurseListAPIView
 
 urlpatterns = [
     # La ruta es vacía aquí porque la incluiremos con el prefijo 'login/' en el config principal, 
@@ -11,4 +11,6 @@ urlpatterns = [
     
     # Aprovechamos para dejar listo el logout
     path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
+
+    path('api/nurses/', PublicNurseListAPIView.as_view(), name='api_nurses_list'),
 ]

@@ -1,0 +1,74 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hola Enfermera - Recordatorios{% endblock %}</title>
+    
+    <!-- Tailwind CSS (CDN para desarrollo rápido, luego lo puedes bajar) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts (Inter o similar para legibilidad) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome para íconos simples -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Estilos Específicos para el Wizard -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F3F4F6; }
+        .step-active { @apply border-blue-600 text-blue-600; }
+        .step-inactive { @apply border-gray-300 text-gray-500; }
+        /* Ajustes para móviles */
+        .mobile-container { @apply min-h-screen flex flex-col bg-white sm:bg-gray-50; }
+        .wizard-card { @apply flex-grow p-6 sm:max-w-md sm:mx-auto sm:bg-white sm:rounded-xl sm:shadow-lg sm:my-10; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+
+    <div class="mobile-container">
+        
+        <!-- Cabecera Simple (Solo Logo) -->
+        <header class="p-4 flex justify-center border-b border-gray-100 bg-white">
+            <img src="{% static 'img/logo-hola-enfermera.png' %}" alt="Hola Enfermera" class="h-10">
+        </header>
+
+        <!-- Barra de Progreso (Pasos) -->
+        <div class="px-6 pt-6 pb-2">
+            <div class="flex items-center justify-between relative">
+                <div class="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-gray-200 -z-10"></div>
+                
+                <!-- Paso 1 -->
+                <div class="flex flex-col items-center bg-white px-2">
+                    <div id="step-indicator-1" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm ring-4 ring-white">1</div>
+                    <span class="text-xs font-semibold mt-1 text-blue-600">Dosis</span>
+                </div>
+                
+                <!-- Paso 2 -->
+                <div class="flex flex-col items-center bg-white px-2">
+                    <div id="step-indicator-2" class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm ring-4 ring-white">2</div>
+                    <span class="text-xs font-medium mt-1 text-gray-500">Calidad</span>
+                </div>
+
+                <!-- Paso 3 -->
+                <div class="flex flex-col items-center bg-white px-2">
+                    <div id="step-indicator-3" class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm ring-4 ring-white">3</div>
+                    <span class="text-xs font-medium mt-1 text-gray-500">Datos</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenido del Wizard -->
+        <main class="wizard-card">
+            {% block content %}{% endblock %}
+        </main>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

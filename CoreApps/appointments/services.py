@@ -10,6 +10,7 @@ from CoreApps.scheduling.models import NurseSchedule
 from CoreApps.services.models import Service
 from CoreApps.users.models import CustomerProfile
 from CoreApps.notifications.services import NotificationService
+from CoreApps.reports.models import ServiceFeedback
 
 User = get_user_model()
 
@@ -122,23 +123,34 @@ class AvailabilityService:
 
 class BookingManager:
     """
-    Gestor de Reservas Públicas.
+    Gestor Central de Reservas y Leads.
     """
+    
     @staticmethod
     @transaction.atomic
     def crear_cita_publica(datos_cliente, datos_cita):
-        # 1. Gestión de Usuario (Busca o Crea)
+        # ... (Este método ya lo tenías, déjalo igual) ...
+        pass 
+
+    @staticmethod
+    @transaction.atomic
+    def procesar_recordatorio_huerfano(datos_cliente, datos_lead):
+        """
+        Procesa el formulario de 'Recordatorio + Calificación'.
+        1. Busca/Crea Cliente.
+        2. Calcula fecha futura basada en fecha_aplicacion pasada.
+        3. Crea AppointmentReminder.
+        4. Crea ServiceFeedback (Calificación).
+        """
+        
+        # 1. GESTIÓN DE USUARIO (Idéntico a crear cita)
         email = datos_cliente.get('email')
         cedula = datos_cliente.get('cedula')
         
         usuario = User.objects.filter(Q(email=email) | Q(cedula=cedula)).first()
-        es_nuevo = False
-        password_temporal = None
         
         if not usuario:
-            es_nuevo = True
             password_temporal = get_random_string(length=8)
-            
             usuario = User.objects.create_user(
                 username=email,
                 email=email,
@@ -149,43 +161,66 @@ class BookingManager:
                 telefono=datos_cliente.get('telefono'),
                 rol=User.Roles.CLIENTE
             )
-            
-            CustomerProfile.objects.create(
-                user=usuario,
-                direccion=datos_cliente.get('direccion', ''),
-                ciudad=datos_cliente.get('ciudad', ''),
-                google_maps_link=datos_cliente.get('google_maps_link', '')
-            )
+            CustomerProfile.objects.create(user=usuario)
+            # Opcional: Enviar correo de bienvenida aquí también
         
-        # 2. Obtener objetos
-        servicio = Service.objects.get(id=datos_cita['servicio_id'])
-        fecha = datetime.strptime(datos_cita['fecha'], "%Y-%m-%d").date()
-        hora = datetime.strptime(datos_cita['hora'], "%H:%M").time()
+        # 2. CÁLCULO DE FECHA (La lógica de la dueña)
+        fecha_aplicacion_str = datos_lead.get('fecha_aplicacion') # "2023-11-20"
+        medicamento_id = datos_lead.get('medicamento_id')
+        medicamento_texto = datos_lead.get('medicamento_texto')
         
-        # ASIGNACIÓN EXPLÍCITA: El cliente eligió a UN enfermero específico
-        enfermero_id = datos_cita.get('enfermero_id')
-        enfermero = User.objects.get(id=enfermero_id, rol='ENFERMERO') if enfermero_id else None
+        fecha_limite = None
+        medicamento_obj = None
         
-        # 3. Crear Cita
-        # Buscamos el estado PENDIENTE (asegúrate que exista en BD)
-        estado_pendiente, _ = AppointmentStatus.objects.get_or_create(nombre='PENDIENTE')
-        
-        cita = Appointment.objects.create(
+        if fecha_aplicacion_str and medicamento_id:
+            try:
+                fecha_app = datetime.strptime(fecha_aplicacion_str, "%Y-%m-%d").date()
+                medicamento_obj = Medication.objects.get(id=medicamento_id)
+                
+                # Lógica de cálculo según unidad
+                val = medicamento_obj.frecuencia_valor
+                uni = medicamento_obj.frecuencia_unidad
+                
+                if uni == 'DIAS':
+                    fecha_limite = fecha_app + timedelta(days=val)
+                elif uni == 'MESES': # Aproximación simple +30 días por mes
+                    fecha_limite = fecha_app + timedelta(days=val*30) 
+                elif uni == 'ANIOS':
+                    fecha_limite = fecha_app.replace(year=fecha_app.year + val)
+            except Exception as e:
+                print(f"Error calculando fecha: {e}")
+                # Si falla, se queda en None y la dueña lo pone manual.
+
+        # 3. CREAR RECORDATORIO
+        reminder = AppointmentReminder.objects.create(
             paciente=usuario,
-            servicio=servicio,
-            enfermero=enfermero, # Aquí guardamos al que eligió el cliente
-            estado=estado_pendiente,
-            fecha=fecha,
-            hora_inicio=hora,
-            tipo_ubicacion=datos_cita.get('tipo_ubicacion', 'DOMICILIO'),
-            latitud=datos_cita.get('latitud'),
-            longitud=datos_cita.get('longitud'),
-            notas=datos_cita.get('notas', ''),
-            cliente_tiene_insumos=datos_cita.get('tiene_insumos', False)
+            origen='WEB',
+            medicamento_catalogo=medicamento_obj,
+            medicamento_externo=medicamento_texto, # Por si puso "Otro"
+            fecha_limite_sugerida=fecha_limite,
+            estado='PENDIENTE',
+            notas=f"Lead captado desde web. Última aplicación reportada: {fecha_aplicacion_str}"
         )
         
-        # 4. Notificaciones
-        if es_nuevo and password_temporal:
-            NotificationService.enviar_bienvenida_usuario(usuario, password_temporal)
-            
-        return cita
+        # 4. CREAR CALIFICACIÓN (FEEDBACK)
+        enfermero_id = datos_lead.get('enfermero_id')
+        rating = datos_lead.get('rating') # 1 a 5
+        
+        if enfermero_id and rating:
+            try:
+                enfermero = User.objects.get(id=enfermero_id, rol='ENFERMERO')
+                ServiceFeedback.objects.create(
+                    paciente=usuario,
+                    enfermero=enfermero,
+                    rating=int(rating),
+                    origen='WEB_HUERFANO',
+                    comentario="Calificación recibida durante registro de recordatorio."
+                )
+                # Aquí vinculamos la preferencia al recordatorio para cerrar el círculo
+                reminder.enfermero_sugerido = enfermero
+                reminder.save()
+                
+            except User.DoesNotExist:
+                pass # Si el ID no es válido, ignoramos la calificación pero guardamos el lead
+                
+        return reminder

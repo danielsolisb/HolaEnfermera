@@ -1,0 +1,49 @@
+{% extends 'layouts/wizard_base.html' %}
+{% load static %}
+
+{% block title %}¡Todo Listo!{% endblock %}
+
+{% block content %}
+<div class="text-center py-10 animate-fade-in-up">
+    <!-- Icono de Éxito -->
+    <div class="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-green-100 mb-6">
+        <i class="fas fa-check text-5xl text-green-600"></i>
+    </div>
+    
+    <h2 class="text-3xl font-extrabold text-gray-900 mb-4">¡Recordatorio Activado!</h2>
+    
+    <p class="text-lg text-gray-600 mb-8 px-4">
+        Hemos registrado tu tratamiento. Te enviaremos un mensaje de WhatsApp cuando sea el momento de tu próxima dosis.
+    </p>
+
+    <!-- Información Adicional -->
+    <div class="bg-blue-50 rounded-xl p-6 mb-8 text-left mx-4 border border-blue-100">
+        <h3 class="text-blue-800 font-bold mb-2"><i class="fas fa-info-circle mr-2"></i>¿Qué sigue?</h3>
+        <ul class="list-disc list-inside text-blue-700 space-y-2 text-sm">
+            <li>Si eres un usuario nuevo, revisa tu correo para ver tu contraseña temporal.</li>
+            <li>Puedes agendar otros servicios en cualquier momento desde nuestra web.</li>
+        </ul>
+    </div>
+
+    <!-- Botones de Acción -->
+    <div class="space-y-3 px-4">
+        <a href="{% url 'home' %}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-lg shadow-lg transition transform hover:-translate-y-1">
+            Volver al Inicio
+        </a>
+        
+        <a href="{% url 'public_reminder_step1' %}" class="block w-full bg-white border-2 border-gray-200 hover:bg-gray-50 text-gray-600 font-bold py-4 rounded-xl text-lg transition">
+            Crear otro recordatorio
+        </a>
+    </div>
+</div>
+
+<style>
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up {
+        animation: fadeInUp 0.6s ease-out forwards;
+    }
+</style>
+{% endblock %}

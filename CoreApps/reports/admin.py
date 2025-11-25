@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ServiceReport
+from .models import ServiceReport, ServiceFeedback
 
 @admin.register(ServiceReport)
 class ServiceReportAdmin(admin.ModelAdmin):
@@ -19,3 +19,9 @@ class ServiceReportAdmin(admin.ModelAdmin):
             'description': 'Si se marca seguimiento, el sistema creará un Recordatorio automático.'
         }),
     )
+
+@admin.register(ServiceFeedback)
+class ServiceFeedbackAdmin(admin.ModelAdmin):
+    list_display = ('paciente', 'enfermero', 'rating', 'origen', 'fecha_registro')
+    list_filter = ('rating', 'enfermero', 'origen')
+    search_fields = ('paciente__email', 'enfermero__first_name', 'enfermero__last_name')

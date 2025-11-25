@@ -1,0 +1,104 @@
+{% extends 'layouts/wizard_base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="mb-6">
+    <!-- Indicador -->
+    <div class="flex items-center justify-between mb-8">
+        <div class="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center font-bold"><i class="fas fa-check"></i></div>
+        <div class="flex-1 h-1 bg-green-500 mx-2"></div>
+        <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold shadow-lg ring-4 ring-blue-100">2</div>
+        <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+        <div class="w-10 h-10 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-bold">3</div>
+    </div>
+
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">Tu Experiencia</h2>
+    <p class="text-gray-500 text-sm mb-6">¿Quién te atendió y cómo te fue?</p>
+</div>
+
+<form method="POST" action="{% url 'reminder_step_2' %}" id="step2Form">
+    {% csrf_token %}
+    <input type="hidden" name="enfermero_id" id="inputNurseId" required>
+    <input type="hidden" name="rating" id="inputRating" required>
+
+    <!-- Grid Enfermeros -->
+    <div class="mb-6">
+        <label class="block text-gray-700 text-sm font-bold mb-3">Selecciona al profesional</label>
+        <div class="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto p-1">
+            {% for enf in enfermeros %}
+            <div class="nurse-card border-2 border-gray-200 rounded-xl p-3 flex flex-col items-center cursor-pointer transition hover:border-blue-300 bg-white"
+                 onclick="selectNurse(this, '{{ enf.id }}')">
+                
+                {% if enf.foto %}
+                    <img src="{{ enf.foto.url }}" class="w-16 h-16 rounded-full object-cover mb-2 border border-gray-100">
+                {% else %}
+                    <img src="{% static 'img/profile-photos/user.png' %}" class="w-16 h-16 rounded-full object-cover mb-2 border border-gray-100">
+                {% endif %}
+                
+                <span class="text-sm font-semibold text-gray-700 text-center leading-tight">
+                    {{ enf.first_name }} {{ enf.last_name }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Estrellas -->
+    <div class="mb-8 text-center bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+        <label class="block text-gray-700 text-sm font-bold mb-3">Califica el servicio</label>
+        <div class="flex justify-center space-x-2 text-4xl text-gray-300 cursor-pointer">
+            <span class="star transition transform hover:scale-110" onclick="rate(1)">★</span>
+            <span class="star transition transform hover:scale-110" onclick="rate(2)">★</span>
+            <span class="star transition transform hover:scale-110" onclick="rate(3)">★</span>
+            <span class="star transition transform hover:scale-110" onclick="rate(4)">★</span>
+            <span class="star transition transform hover:scale-110" onclick="rate(5)">★</span>
+        </div>
+        <p id="ratingText" class="text-blue-600 font-bold mt-2 h-6 text-sm"></p>
+    </div>
+
+    <div class="flex space-x-3">
+        <a href="{% url 'reminder_step_1' %}" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-4 rounded-xl text-lg text-center">
+            Atrás
+        </a>
+        <button type="submit" id="btnSubmit" disabled class="w-2/3 bg-gray-300 text-gray-500 font-bold py-4 rounded-xl text-lg shadow-none cursor-not-allowed transition">
+            Siguiente
+        </button>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function selectNurse(element, id) {
+        document.querySelectorAll('.nurse-card').forEach(c => c.classList.remove('border-blue-600', 'bg-blue-50'));
+        element.classList.add('border-blue-600', 'bg-blue-50');
+        document.getElementById('inputNurseId').value = id;
+        validate();
+    }
+
+    function rate(val) {
+        document.getElementById('inputRating').value = val;
+        const stars = document.querySelectorAll('.star');
+        stars.forEach((s, idx) => {
+            if (idx < val) s.classList.add('text-yellow-400');
+            else s.classList.remove('text-yellow-400');
+        });
+        const labels = ["Malo", "Regular", "Bueno", "Muy Bueno", "Excelente"];
+        document.getElementById('ratingText').innerText = labels[val - 1];
+        validate();
+    }
+
+    function validate() {
+        const nurse = document.getElementById('inputNurseId').value;
+        const rating = document.getElementById('inputRating').value;
+        const btn = document.getElementById('btnSubmit');
+        
+        if (nurse && rating) {
+            btn.disabled = false;
+            btn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            btn.classList.add('bg-blue-600', 'text-white', 'shadow-lg');
+        }
+    }
+</script>
+{% endblock %}
