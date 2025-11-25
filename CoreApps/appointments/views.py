@@ -161,23 +161,24 @@ class ReminderExperienceView(View):
     template_name = 'main/public_booking/reminder_experience.html'
 
     def get(self, request):
-        # 1. Obtener Medicamentos para el buscador
-        medicamentos = list(Medication.objects.filter(activo=True).values('id', 'nombre'))
+        # 1. Obtener Medicamentos (Ordenados alfabéticamente)
+        # Usamos .values() para ser eficientes
+        medicamentos = Medication.objects.filter(activo=True).values('id', 'nombre').order_by('nombre')
         
-        # 2. Obtener Enfermeros para la selección
+        # 2. Obtener Enfermeros
         enfermeros = User.objects.filter(rol='ENFERMERO', is_active=True)
         
-        # 3. Recuperar datos si el usuario da "Atrás"
+        # 3. Datos previos
         initial_data = request.session.get('wizard_data', {})
         
         context = {
-            'medicamentos_json': medicamentos,
+            'medicamentos': medicamentos, # Pasamos la lista para el Select
             'enfermeros': enfermeros,
             'data': initial_data,
-            'step': 1 # Para la barra de progreso
+            'step': 1 
         }
         return render(request, self.template_name, context)
-
+        
     def post(self, request):
         # Guardamos TODO en la sesión de una sola vez
         request.session['wizard_data'] = {
