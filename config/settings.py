@@ -30,6 +30,10 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+CSRF_TRUSTED_ORIGINS = [
+    'https://b62c2f8a99cc.ngrok-free.app',
+    'http://127.0.0.1:8000',  # Para que te siga funcionando en local
+]
 #ALLOWED_HOSTS = []
 
 AUTH_USER_MODEL = 'users.User'

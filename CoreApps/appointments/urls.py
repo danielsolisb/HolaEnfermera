@@ -1,17 +1,28 @@
 from django.urls import path
-from .views import AvailabilityAPIView, PublicBookingAPIView, PublicReminderCreationAPIView, LeadReminderWizardView, ReminderStep1View, ReminderStep2View, ReminderStep3View, ReminderSuccessView
+from .views import (
+    AvailabilityAPIView, 
+    PublicBookingAPIView, 
+    PublicReminderCreationAPIView, 
+    ReminderExperienceView, # <--- NUEVA VISTA
+    ReminderPatientView,    # <--- NUEVO NOMBRE PARA EL PASO 2 (Antes 3)
+    ReminderSuccessView,
+    CheckUserAPIView
+)
 
 urlpatterns = [
-    # Rutas API (para consumo del Frontend/JS)
+    # --- APIs ---
     path('api/availability/', AvailabilityAPIView.as_view(), name='api_availability'),
     path('api/book/', PublicBookingAPIView.as_view(), name='api_booking'),
-
     path('api/lead-reminder/', PublicReminderCreationAPIView.as_view(), name='api_lead_reminder'),
+    path('api/check-user/', CheckUserAPIView.as_view(), name='api_check_user'),
 
-    #path('recordatorio-medicamento/', LeadReminderWizardView.as_view(), name='public_reminder_wizard'),
-
-    path('recordatorio/paso-1/', ReminderStep1View.as_view(), name='public_reminder_step1'),
-    path('recordatorio/paso-2/', ReminderStep2View.as_view(), name='public_reminder_step2'),
-    path('recordatorio/paso-3/', ReminderStep3View.as_view(), name='public_reminder_step3'),
+    # --- WIZARD PÚBLICO (NUEVA ESTRUCTURA 2 PASOS) ---
+    # Paso 1: Experiencia (Medicamento + Enfermero + Rating)
+    path('recordatorio/experiencia/', ReminderExperienceView.as_view(), name='public_reminder_experience'),
+    
+    # Paso 2: Datos Paciente (Antes Paso 3)
+    path('recordatorio/paciente/', ReminderPatientView.as_view(), name='public_reminder_patient'),
+    
+    # Éxito
     path('recordatorio/exito/', ReminderSuccessView.as_view(), name='public_reminder_success'),
 ]

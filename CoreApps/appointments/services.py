@@ -5,12 +5,15 @@ from django.db import transaction
 from django.utils.crypto import get_random_string
 
 # Importamos modelos
-from CoreApps.appointments.models import Appointment, AppointmentStatus
+from CoreApps.appointments.models import Appointment, AppointmentStatus, AppointmentReminder
+from CoreApps.services.models import Medication
 from CoreApps.scheduling.models import NurseSchedule
 from CoreApps.services.models import Service
 from CoreApps.users.models import CustomerProfile
 from CoreApps.notifications.services import NotificationService
 from CoreApps.reports.models import ServiceFeedback
+
+from django.db import models
 
 User = get_user_model()
 
@@ -134,93 +137,72 @@ class BookingManager:
 
     @staticmethod
     @transaction.atomic
+    @staticmethod
     def procesar_recordatorio_huerfano(datos_cliente, datos_lead):
+        # MANTÉN ESTA FUNCIÓN COMO ESTABA
+        # Se usa en: PublicReminderCreationAPIView (API externa)
+        pass # (Aquí va tu código original)
+
+    # --- AGREGA ESTA NUEVA FUNCIÓN AL FINAL ---
+    @staticmethod
+    def procesar_recordatorio_completo(data):
         """
-        Procesa el formulario de 'Recordatorio + Calificación'.
-        1. Busca/Crea Cliente.
-        2. Calcula fecha futura basada en fecha_aplicacion pasada.
-        3. Crea AppointmentReminder.
-        4. Crea ServiceFeedback (Calificación).
+        NUEVA LÓGICA (Fase 2): 
+        Procesa el flujo unificado del Wizard de 2 pasos.
+        Recibe un solo diccionario con TODOS los datos mezclados.
         """
+        from CoreApps.users.models import CustomerProfile
         
-        # 1. GESTIÓN DE USUARIO (Idéntico a crear cita)
-        email = datos_cliente.get('email')
-        cedula = datos_cliente.get('cedula')
+        # 1. Gestión de Usuario (Buscar o Crear)
+        cedula = data.get('cedula')
+        email = data.get('email')
         
-        usuario = User.objects.filter(Q(email=email) | Q(cedula=cedula)).first()
+        user = User.objects.filter(models.Q(cedula=cedula) | models.Q(email=email)).first()
         
-        if not usuario:
-            password_temporal = get_random_string(length=8)
-            usuario = User.objects.create_user(
-                username=email,
+        if not user:
+            # Crear usuario nuevo
+            username = email.split('@')[0] + "_" + cedula[-4:]
+            user = User.objects.create_user(
+                username=username,
                 email=email,
-                password=password_temporal,
-                first_name=datos_cliente.get('nombres'),
-                last_name=datos_cliente.get('apellidos'),
+                password=cedula, # Password temporal
+                first_name=data.get('nombres'),
+                last_name=data.get('apellidos'),
                 cedula=cedula,
-                telefono=datos_cliente.get('telefono'),
+                telefono=data.get('telefono'),
                 rol=User.Roles.CLIENTE
             )
-            CustomerProfile.objects.create(user=usuario)
-            # Opcional: Enviar correo de bienvenida aquí también
-        
-        # 2. CÁLCULO DE FECHA (La lógica de la dueña)
-        fecha_aplicacion_str = datos_lead.get('fecha_aplicacion') # "2023-11-20"
-        medicamento_id = datos_lead.get('medicamento_id')
-        medicamento_texto = datos_lead.get('medicamento_texto')
-        
-        fecha_limite = None
-        medicamento_obj = None
-        
-        if fecha_aplicacion_str and medicamento_id:
-            try:
-                fecha_app = datetime.strptime(fecha_aplicacion_str, "%Y-%m-%d").date()
-                medicamento_obj = Medication.objects.get(id=medicamento_id)
-                
-                # Lógica de cálculo según unidad
-                val = medicamento_obj.frecuencia_valor
-                uni = medicamento_obj.frecuencia_unidad
-                
-                if uni == 'DIAS':
-                    fecha_limite = fecha_app + timedelta(days=val)
-                elif uni == 'MESES': # Aproximación simple +30 días por mes
-                    fecha_limite = fecha_app + timedelta(days=val*30) 
-                elif uni == 'ANIOS':
-                    fecha_limite = fecha_app.replace(year=fecha_app.year + val)
-            except Exception as e:
-                print(f"Error calculando fecha: {e}")
-                # Si falla, se queda en None y la dueña lo pone manual.
+        else:
+            # Actualizar usuario existente
+            user.first_name = data.get('nombres')
+            user.last_name = data.get('apellidos')
+            user.telefono = data.get('telefono')
+            user.save()
 
-        # 3. CREAR RECORDATORIO
-        reminder = AppointmentReminder.objects.create(
-            paciente=usuario,
+        # 2. Gestión de Perfil (NUEVO REQUERIMIENTO)
+        perfil, created = CustomerProfile.objects.get_or_create(user=user)
+        
+        if data.get('fecha_nacimiento'):
+            perfil.fecha_nacimiento = data.get('fecha_nacimiento')
+        if data.get('ciudad'):
+            perfil.ciudad = data.get('ciudad')
+        perfil.save()
+
+        # 3. Crear el Recordatorio
+        medicamento = None
+        if data.get('medicamento_id'):
+            medicamento = Medication.objects.filter(id=data['medicamento_id']).first()
+
+        reminder = AppointmentReminder(
+            paciente=user,
+            medicamento_catalogo=medicamento,
+            medicamento_externo=data.get('medicamento_texto') if not medicamento else None,
+            # Nota: El modelo AppointmentReminder ya calcula la fecha_limite en su método save()
+            # si le pasas un medicamento_catalogo.
             origen='WEB',
-            medicamento_catalogo=medicamento_obj,
-            medicamento_externo=medicamento_texto, # Por si puso "Otro"
-            fecha_limite_sugerida=fecha_limite,
             estado='PENDIENTE',
-            notas=f"Lead captado desde web. Última aplicación reportada: {fecha_aplicacion_str}"
+            notas=f"Rating: {data.get('rating')}/5. Enfermero ID: {data.get('enfermero_id')}"
         )
+        reminder.save()
         
-        # 4. CREAR CALIFICACIÓN (FEEDBACK)
-        enfermero_id = datos_lead.get('enfermero_id')
-        rating = datos_lead.get('rating') # 1 a 5
-        
-        if enfermero_id and rating:
-            try:
-                enfermero = User.objects.get(id=enfermero_id, rol='ENFERMERO')
-                ServiceFeedback.objects.create(
-                    paciente=usuario,
-                    enfermero=enfermero,
-                    rating=int(rating),
-                    origen='WEB_HUERFANO',
-                    comentario="Calificación recibida durante registro de recordatorio."
-                )
-                # Aquí vinculamos la preferencia al recordatorio para cerrar el círculo
-                reminder.enfermero_sugerido = enfermero
-                reminder.save()
-                
-            except User.DoesNotExist:
-                pass # Si el ID no es válido, ignoramos la calificación pero guardamos el lead
-                
         return reminder

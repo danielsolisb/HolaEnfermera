@@ -2,36 +2,35 @@
 
 {% block content %}
 <div class="mb-6">
-    <div class="flex items-center justify-between mb-8">
-        <div class="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center font-bold"><i class="fas fa-check"></i></div>
-        <div class="flex-1 h-1 bg-green-500 mx-2"></div>
-        <div class="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center font-bold"><i class="fas fa-check"></i></div>
-        <div class="flex-1 h-1 bg-green-500 mx-2"></div>
-        <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold shadow-lg ring-4 ring-blue-100">3</div>
-    </div>
-
     <h2 class="text-2xl font-bold text-gray-800 mb-2">Tus Datos</h2>
-    <p class="text-gray-500 text-sm mb-6">Para contactarte cuando sea el momento.</p>
+    <p class="text-gray-500 text-sm">Para contactarte y enviarte promociones de cumpleaños.</p>
 </div>
 
-<form method="POST" action="{% url 'reminder_step_3' %}" id="finalForm" class="space-y-4">
+{% if error %}
+<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+    <p class="font-bold">Error</p>
+    <p>{{ error }}</p>
+</div>
+{% endif %}
+
+<form method="POST" action="{% url 'public_reminder_patient' %}" id="finalForm" class="space-y-5">
     {% csrf_token %}
 
-    <!-- Cédula (El Gatillo) -->
     <div>
-        <label class="block text-gray-700 text-sm font-bold mb-2">Número de Cédula</label>
+        <label class="block text-gray-700 text-xs font-bold mb-1">Cédula de Identidad</label>
         <div class="relative">
-            <input type="tel" name="cedula" id="cedula" class="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-lg shadow-sm font-mono tracking-wider" placeholder="Ej: 099..." maxlength="10" required>
-            <!-- Spinner -->
-            <div id="cedulaLoader" class="absolute right-4 top-4 hidden text-blue-500">
+            <input type="tel" name="cedula" id="cedula" 
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono tracking-wider" 
+                   placeholder="Ej: 099..." maxlength="10" required value="{{ data.cedula|default:'' }}">
+            <div id="cedulaLoader" class="absolute right-3 top-3 hidden text-blue-500">
                 <i class="fas fa-circle-notch fa-spin"></i>
             </div>
         </div>
         <p id="userMsg" class="text-xs mt-1 h-4 font-medium"></p>
     </div>
 
-    <!-- Contenedor de Datos (Se muestra/oculta) -->
     <div id="dataFields" class="space-y-4 opacity-50 pointer-events-none transition-opacity duration-300">
+        
         <div class="grid grid-cols-2 gap-4">
             <div>
                 <label class="block text-gray-700 text-xs font-bold mb-1">Nombres</label>
@@ -40,6 +39,17 @@
             <div>
                 <label class="block text-gray-700 text-xs font-bold mb-1">Apellidos</label>
                 <input type="text" name="apellidos" id="apellidos" class="w-full p-3 border border-gray-300 rounded-lg" required>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-gray-700 text-xs font-bold mb-1">Fecha Nacimiento</label>
+                <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" class="w-full p-3 border border-gray-300 rounded-lg" required>
+            </div>
+            <div>
+                <label class="block text-gray-700 text-xs font-bold mb-1">Ciudad</label>
+                <input type="text" name="ciudad" id="ciudad" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Ej: Guayaquil" required>
             </div>
         </div>
 
@@ -55,10 +65,10 @@
     </div>
 
     <div class="pt-4 flex space-x-3">
-        <a href="{% url 'reminder_step_2' %}" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-4 rounded-xl text-lg text-center">
+        <a href="{% url 'public_reminder_experience' %}" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-center flex items-center justify-center">
             Atrás
         </a>
-        <button type="submit" id="btnFinal" class="w-2/3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-lg shadow-lg transition">
+        <button type="submit" id="btnFinal" class="w-2/3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">
             Finalizar
         </button>
     </div>
@@ -75,42 +85,47 @@
     cedulaInput.addEventListener('input', function() {
         const val = this.value;
         clearTimeout(timeout);
-        
-        // Resetear estado visual
         msg.innerText = '';
         
         if (val.length >= 10) {
             document.getElementById('cedulaLoader').classList.remove('hidden');
             
             timeout = setTimeout(() => {
-                fetch(`/api/check-user/?cedula=${val}`)
+                const apiUrl = "{% url 'api_check_user' %}";
+                fetch(`${apiUrl}?cedula=${val}`)
                     .then(res => res.json())
                     .then(data => {
                         document.getElementById('cedulaLoader').classList.add('hidden');
                         
-                        if (data.status === 'found') {
-                            // Usuario encontrado
-                            msg.innerText = `Hola ${data.data.nombre}, bienvenido de nuevo.`;
+                        if (data.exists === true) {
+                            msg.innerText = `Hola ${data.user.nombres}, actualicemos tus datos.`;
                             msg.className = "text-xs mt-1 h-4 font-medium text-green-600";
                             
-                            // Pre-llenar (datos enmascarados o reales según tu API)
-                            // O dejar que el usuario llene para actualizar
-                            document.getElementById('nombres').value = data.data.nombre; // Solo nombre pila
-                            // Desbloqueamos para que actualice si quiere
+                            // Llenar campos
+                            document.getElementById('nombres').value = data.user.nombres || '';
+                            document.getElementById('apellidos').value = data.user.apellidos || '';
+                            document.getElementById('email').value = data.user.email || '';
+                            document.getElementById('telefono').value = data.user.telefono || '';
+                            
+                            // Llenar nuevos campos
+                            document.getElementById('fecha_nacimiento').value = data.user.fecha_nacimiento || '';
+                            document.getElementById('ciudad').value = data.user.ciudad || '';
+
                             unlockFields();
                         } else {
-                            // Usuario nuevo
-                            msg.innerText = "No te encontramos, por favor llena tus datos.";
+                            msg.innerText = "Usuario nuevo. Por favor completa tu perfil.";
                             msg.className = "text-xs mt-1 h-4 font-medium text-blue-600";
+                            // Limpiar por seguridad
+                            document.querySelectorAll('#dataFields input').forEach(i => i.value = '');
                             unlockFields();
                         }
                     })
                     .catch(err => {
                         console.error(err);
                         document.getElementById('cedulaLoader').classList.add('hidden');
-                        unlockFields(); // Por si acaso falla la red, dejar llenar
+                        unlockFields();
                     });
-            }, 800); // Delay para no saturar
+            }, 800);
         }
     });
 

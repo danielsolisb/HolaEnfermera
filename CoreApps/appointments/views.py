@@ -15,6 +15,7 @@ from django.shortcuts import render, redirect
 
 
 from django.contrib.auth import get_user_model
+from CoreApps.users.models import User
 
 
 
@@ -123,123 +124,127 @@ class LeadReminderWizardView(TemplateView):
         return context
 
 
+class CheckUserAPIView(View):
+    def get(self, request):
+        cedula = request.GET.get('cedula')
+        if not cedula:
+            return JsonResponse({'exists': False})
+        
+        try:
+            user = User.objects.get(cedula=cedula, rol='CLIENTE')
+            
+            # Intentamos obtener el perfil (puede que no exista si es un usuario antiguo)
+            perfil = getattr(user, 'perfil_cliente', None)
+            
+            data = {
+                'exists': True,
+                'user': {
+                    'nombres': user.first_name,
+                    'apellidos': user.last_name,
+                    'email': user.email,
+                    'telefono': user.telefono,
+                    # Datos del Perfil (si existen)
+                    'fecha_nacimiento': perfil.fecha_nacimiento.strftime('%Y-%m-%d') if (perfil and perfil.fecha_nacimiento) else '',
+                    'ciudad': perfil.ciudad if perfil else '',
+                }
+            }
+            return JsonResponse(data)
+        except User.DoesNotExist:
+            return JsonResponse({'exists': False})
 
 #----------------------------------------
-class ReminderStep1View(View):
+
+class ReminderExperienceView(View):
     """
-    Paso 1: Qué y Cuándo.
-    Captura medicamento y fecha. Guarda en sesión.
+    NUEVO PASO 1: Captura Medicamento, Fecha, Enfermero y Calificación.
     """
-    template_name = 'main/public_booking/reminder_step_1.html'
+    template_name = 'main/public_booking/reminder_experience.html'
 
     def get(self, request):
-        # Obtenemos medicamentos para el autocompletado (JSON)
+        # 1. Obtener Medicamentos para el buscador
         medicamentos = list(Medication.objects.filter(activo=True).values('id', 'nombre'))
         
-        # Recuperamos datos previos si el usuario dio "Atrás"
+        # 2. Obtener Enfermeros para la selección
+        enfermeros = User.objects.filter(rol='ENFERMERO', is_active=True)
+        
+        # 3. Recuperar datos si el usuario da "Atrás"
         initial_data = request.session.get('wizard_data', {})
         
         context = {
             'medicamentos_json': medicamentos,
-            'data': initial_data
+            'enfermeros': enfermeros,
+            'data': initial_data,
+            'step': 1 # Para la barra de progreso
         }
         return render(request, self.template_name, context)
 
     def post(self, request):
-        # Guardamos en la sesión del navegador (temporalmente)
+        # Guardamos TODO en la sesión de una sola vez
         request.session['wizard_data'] = {
+            # Datos de Medicamento
             'medicamento_id': request.POST.get('medicamento_id'),
             'medicamento_texto': request.POST.get('medicamento_texto'),
             'fecha_aplicacion': request.POST.get('fecha_aplicacion'),
-        }
-        return redirect('public_reminder_step2')
-
-class ReminderStep2View(View):
-    """
-    Paso 2: Calidad y Preferencia.
-    Captura enfermero y rating. Guarda en sesión.
-    """
-    template_name = 'main/public_booking/reminder_step_2.html'
-
-    def get(self, request):
-        # Seguridad: Si no hay datos del paso 1, regresar
-        if 'wizard_data' not in request.session:
-            return redirect('public_reminder_step1')
             
-        # Traemos los enfermeros activos para la selección visual
-        enfermeros = User.objects.filter(rol='ENFERMERO', is_active=True)
-        
-        context = {
-            'enfermeros': enfermeros,
-            # No necesitamos pasar 'data' aquí porque los inputs son visuales/ocultos,
-            # pero podrías hacerlo si quieres persistencia visual al volver.
-        }
-        return render(request, self.template_name, context)
-
-    def post(self, request):
-        # Recuperamos lo que ya teníamos
-        data = request.session.get('wizard_data', {})
-        
-        # Agregamos lo nuevo
-        data.update({
+            # Datos de Enfermero y Rating
             'enfermero_id': request.POST.get('enfermero_id'),
             'rating': request.POST.get('rating'),
-        })
-        
-        # Guardamos de nuevo en sesión
-        request.session['wizard_data'] = data
-        return redirect('public_reminder_step3')
+        }
+        # Redirigimos al nuevo Paso 2
+        return redirect('public_reminder_patient')
 
-class ReminderStep3View(View):
+class ReminderPatientView(View):
     """
-    Paso 3: Datos Personales y Confirmación.
-    Recibe datos finales, llama al Manager y guarda en BD.
+    NUEVO PASO 2: Datos Personales + Perfil (Cumpleaños/Ciudad)
     """
-    template_name = 'main/public_booking/reminder_step_3.html'
-
+    # Usaremos una nueva plantilla para ser ordenados
+    template_name = 'main/public_booking/reminder_patient.html' 
+    
     def get(self, request):
         if 'wizard_data' not in request.session:
-            return redirect('public_reminder_step1')
-        return render(request, self.template_name)
+            return redirect('public_reminder_experience')
+        return render(request, self.template_name, {'step': 2})
 
     def post(self, request):
         session_data = request.session.get('wizard_data', {})
         
-        # Datos del Cliente (Vienen del POST actual)
-        datos_cliente = {
+        # 1. Recopilar datos del Formulario Actual (Paso 2)
+        datos_paciente = {
             'cedula': request.POST.get('cedula'),
             'nombres': request.POST.get('nombres'),
             'apellidos': request.POST.get('apellidos'),
             'email': request.POST.get('email'),
             'telefono': request.POST.get('telefono'),
+            # Nuevos campos de Perfil
+            'fecha_nacimiento': request.POST.get('fecha_nacimiento'),
+            'ciudad': request.POST.get('ciudad'),
         }
         
-        # Datos del Lead (Vienen de la sesión)
-        datos_lead = {
-            'medicamento_id': session_data.get('medicamento_id'),
-            'medicamento_texto': session_data.get('medicamento_texto'),
-            'fecha_aplicacion': session_data.get('fecha_aplicacion'),
-            'enfermero_id': session_data.get('enfermero_id'),
-            'rating': session_data.get('rating'),
+        # 2. Fusionar con datos del Paso 1 (Experiencia)
+        datos_completos_lead = {
+            **session_data, # (Medicamento, Fecha, Enfermero, Rating)
+            **datos_paciente
         }
 
         try:
-            # LLAMADA AL CEREBRO (Services.py)
-            BookingManager.procesar_recordatorio_huerfano(datos_cliente, datos_lead)
+            # 3. Llamar al Cerebro (BookingManager)
+            # Nota: Hemos cambiado ligeramente la firma del método, ver Paso 4
+            BookingManager.procesar_recordatorio_completo(datos_completos_lead)
             
-            # Limpieza: Borrar datos de sesión para que no queden ahí
+            # 4. Limpieza y Éxito
             if 'wizard_data' in request.session:
                 del request.session['wizard_data']
             
             return redirect('public_reminder_success')
             
         except Exception as e:
-            # Si falla, mostramos el error en la misma página
             print(f"Error procesando lead: {e}")
-            return render(request, self.template_name, {'error': str(e)})
+            # Devolver el error a la plantilla para que el usuario sepa qué pasó
+            return render(request, self.template_name, {'step': 2, 'error': str(e), 'data': datos_paciente})
 
 class ReminderSuccessView(View):
     template_name = 'main/public_booking/success.html'
     
     def get(self, request):
-        return render(request, self.template_name)
+        # Pasamos 'step': 3 para indicar que todo el proceso finalizó
+        return render(request, self.template_name, {'step': 3})
