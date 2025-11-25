@@ -2,15 +2,15 @@
 
 {% block content %}
 <div class="mb-6">
-    <h2 class="text-2xl font-bold text-gray-800 mb-2">Tu Experiencia</h2>
-    <p class="text-gray-500 text-sm">Para que podamos recordate tu siguiente dosis llena estas preguntas</p>
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">Para que podamos recordate tu siguiente dosis llena estas preguntas</h2>
+    
 </div>
 
 <form method="POST" action="{% url 'public_reminder_experience' %}" class="space-y-8">
     {% csrf_token %}
 
     <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-        <h3 class="font-semibold text-blue-800 mb-4"><i class="fas fa-syringe mr-2"></i>Aplicación</h3>
+        <h3 class="font-semibold text-blue-800 mb-4"><i class="fas fa-syringe mr-2"></i>Qué medicamento y cuando?</h3>
         
         <div class="mb-4">
             <label class="block text-gray-700 text-xs font-bold mb-1">Selecciona el Medicamento</label>

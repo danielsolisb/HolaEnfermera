@@ -12,6 +12,8 @@ from CoreApps.services.models import Service
 from CoreApps.users.models import CustomerProfile
 from CoreApps.notifications.services import NotificationService
 from CoreApps.reports.models import ServiceFeedback
+from CoreApps.notifications.services import WASenderService
+
 
 from django.db import models
 
@@ -143,29 +145,32 @@ class BookingManager:
         # Se usa en: PublicReminderCreationAPIView (API externa)
         pass # (Aquí va tu código original)
 
-    # --- AGREGA ESTA NUEVA FUNCIÓN AL FINAL ---
     @staticmethod
     def procesar_recordatorio_completo(data):
         """
-        NUEVA LÓGICA (Fase 2): 
-        Procesa el flujo unificado del Wizard de 2 pasos.
-        Recibe un solo diccionario con TODOS los datos mezclados.
+        NUEVA LÓGICA MEJORADA:
+        - Guarda datos.
+        - Envía WhatsApp detallado (Fecha calculada, Frecuencia, Agradecimiento Enfermero, Local).
         """
         from CoreApps.users.models import CustomerProfile
         
-        # 1. Gestión de Usuario (Buscar o Crear)
+        # 1. GESTIÓN DE USUARIO
         cedula = data.get('cedula')
         email = data.get('email')
-        
         user = User.objects.filter(models.Q(cedula=cedula) | models.Q(email=email)).first()
         
+        usuario_es_nuevo = False
+        password_temp = None
+
         if not user:
-            # Crear usuario nuevo
+            usuario_es_nuevo = True
             username = email.split('@')[0] + "_" + cedula[-4:]
+            password_temp = cedula 
+            
             user = User.objects.create_user(
                 username=username,
                 email=email,
-                password=cedula, # Password temporal
+                password=password_temp, 
                 first_name=data.get('nombres'),
                 last_name=data.get('apellidos'),
                 cedula=cedula,
@@ -173,36 +178,93 @@ class BookingManager:
                 rol=User.Roles.CLIENTE
             )
         else:
-            # Actualizar usuario existente
+            # Actualizamos datos de contacto por si cambiaron
             user.first_name = data.get('nombres')
             user.last_name = data.get('apellidos')
             user.telefono = data.get('telefono')
             user.save()
 
-        # 2. Gestión de Perfil (NUEVO REQUERIMIENTO)
+        # 2. GESTIÓN DE PERFIL
         perfil, created = CustomerProfile.objects.get_or_create(user=user)
-        
         if data.get('fecha_nacimiento'):
             perfil.fecha_nacimiento = data.get('fecha_nacimiento')
         if data.get('ciudad'):
             perfil.ciudad = data.get('ciudad')
         perfil.save()
 
-        # 3. Crear el Recordatorio
+        # 3. GUARDAR RECORDATORIO (CÁLCULO AUTOMÁTICO DE FECHA)
         medicamento = None
+        nombre_medicamento = data.get('medicamento_texto')
+        
         if data.get('medicamento_id'):
             medicamento = Medication.objects.filter(id=data['medicamento_id']).first()
+            if medicamento:
+                nombre_medicamento = medicamento.nombre
 
         reminder = AppointmentReminder(
             paciente=user,
             medicamento_catalogo=medicamento,
-            medicamento_externo=data.get('medicamento_texto') if not medicamento else None,
-            # Nota: El modelo AppointmentReminder ya calcula la fecha_limite en su método save()
-            # si le pasas un medicamento_catalogo.
+            medicamento_externo=nombre_medicamento,
             origen='WEB',
             estado='PENDIENTE',
             notas=f"Rating: {data.get('rating')}/5. Enfermero ID: {data.get('enfermero_id')}"
         )
-        reminder.save()
+        reminder.save() 
+        # Al hacer save(), el modelo ya calculó 'fecha_limite_sugerida' internamente
         
+        # 4. NOTIFICACIÓN WHATSAPP (CONTENIDO ENRIQUECIDO)
+        try:
+            # A. Preparar Datos para el Mensaje
+            
+            # Nombre de la Enfermera
+            nombre_enfermero = "nuestro equipo"
+            if data.get('enfermero_id'):
+                try:
+                    enfermero_obj = User.objects.get(id=data['enfermero_id'])
+                    nombre_enfermero = f"la enfermera {enfermero_obj.get_full_name()}"
+                except:
+                    pass
+
+            # Fecha y Frecuencia
+            fecha_proxima = reminder.fecha_limite_sugerida
+            texto_fecha = fecha_proxima.strftime('%d/%m/%Y') if fecha_proxima else "definir"
+            
+            texto_frecuencia = ""
+            if medicamento:
+                # Mapeo simple de unidades a texto legible
+                unidades = {'DIAS': 'días', 'MESES': 'meses', 'ANIOS': 'años'}
+                unidad_legible = unidades.get(medicamento.frecuencia_unidad, medicamento.frecuencia_unidad)
+                texto_frecuencia = f"(cada {medicamento.frecuencia_valor} {unidad_legible})"
+
+            # Ciudad
+            ciudad_cliente = perfil.ciudad if perfil.ciudad else "tu ciudad"
+
+            # B. Construcción del Mensaje Empático
+            mensaje = f"👋 Hola {user.first_name}, soy tu asistente de Hola Enfermera.\n\n"
+            
+            mensaje += f"✅ *Recordatorio Creado con Éxito*\n"
+            mensaje += f"Hemos registrado tu aplicación de *{nombre_medicamento}*.\n"
+            mensaje += f"🗓️ *Próxima Dosis:* {texto_fecha} {texto_frecuencia}.\n\n"
+            
+            mensaje += f"🏥 *Tú eliges dónde*\n"
+            mensaje += f"Para esa fecha, recuerda que puedes elegir si deseas que te atendamos a domicilio o visitarnos en nuestro local en {ciudad_cliente}.\n\n"
+
+            mensaje += f"⭐ *¡Gracias por tu valoración!*\n"
+            mensaje += f"Le haremos llegar tus comentarios a {nombre_enfermero}. Tu opinión nos impulsa a seguir mejorando nuestro servicio.\n\n"
+
+            if usuario_es_nuevo:
+                mensaje += "🆕 *Información de tu Cuenta*\n"
+                mensaje += "Para facilitar tus futuros agendamientos, hemos creado una cuenta para ti.\n"
+                mensaje += f"📧 Revisa tu correo ({user.email}) para más detalles.\n"
+                mensaje += f"🔑 Tu contraseña temporal es: {password_temp}\n"
+                mensaje += "Puedes cambiarla ingresando a nuestra web.\n\n"
+            
+            mensaje += "¡Que tengas un excelente día! 💙"
+
+            # Enviar
+            WASenderService.send_message(user.telefono, mensaje)
+
+        except Exception as e:
+            print(f"⚠️ Advertencia: Error construyendo/enviando mensaje: {e}")
+
         return reminder
