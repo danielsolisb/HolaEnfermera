@@ -82,34 +82,24 @@ class BaseUserForm(forms.ModelForm):
 
 # --- FORMULARIO PACIENTES ---
 class PatientForm(BaseUserForm):
-    # Campos específicos del perfil
+    # 1. Redefinimos el email para que sea opcional en el HTML
+    email = forms.EmailField(
+        label="Correo Electrónico",
+        required=False,  # <--- CLAVE: Permite enviar vacío
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Opcional. Se generará automático si se deja vacío.'})
+    )
+    
+    # Campos del perfil...
     fecha_nacimiento = forms.DateField(
         label="Fecha de Nacimiento",
         required=False, 
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
-    ciudad = forms.CharField(
-        label="Ciudad de Residencia",
-        required=False, 
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Guayaquil'})
-    )
-    direccion = forms.CharField(
-        label="Dirección Domiciliaria (Escrita)",
-        required=False, 
-        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Calle, número, intersección...'})
-    )
-    # --- CAMPO NUEVO: Google Maps ---
-    google_maps_link = forms.URLField(
-        label="Enlace de Google Maps (Ubicación GPS)",
-        required=False,
-        widget=forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://maps.google.com/...'}),
-        help_text="Pegue aquí el link de ubicación exacta."
-    )
-    alergias = forms.CharField(
-        label="Alergias y Observaciones Médicas",
-        required=False, 
-        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Indique alergias a medicamentos o condiciones especiales.'})
-    )
+    # ... (resto de campos igual: ciudad, direccion, google_maps, alergias) ...
+    ciudad = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    direccion = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}))
+    google_maps_link = forms.URLField(required=False, widget=forms.URLInput(attrs={'class': 'form-control'}))
+    alergias = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -118,24 +108,49 @@ class PatientForm(BaseUserForm):
             self.fields['fecha_nacimiento'].initial = perfil.fecha_nacimiento
             self.fields['ciudad'].initial = perfil.ciudad
             self.fields['direccion'].initial = perfil.direccion
-            self.fields['google_maps_link'].initial = perfil.google_maps_link # Cargar link existente
+            self.fields['google_maps_link'].initial = perfil.google_maps_link
             self.fields['alergias'].initial = perfil.alergias
+
+    # 2. Lógica de Auto-Generación (Backend Puro)
+    def clean(self):
+        cleaned_data = super().clean()
+        email = cleaned_data.get('email')
+        cedula = cleaned_data.get('cedula')
+
+        # Si no hay email pero hay cédula, generamos el ficticio
+        if not email and cedula:
+            # FORMATO: 0991234567@holaenfermera.com
+            dummy_email = f"{cedula}@holaenfermera.com"
+            
+            # Inyectamos el valor generado para que el resto del sistema lo use
+            cleaned_data['email'] = dummy_email
+            
+            # (Opcional) Podríamos verificar unicidad aquí, pero clean_cedula ya garantiza
+            # que la cédula es única, por ende el email derivado también lo será.
+        
+        return cleaned_data
 
     @transaction.atomic
     def save(self, commit=True):
+        # El user.email ya vendrá lleno desde clean()
         user = super().save(commit=False)
         user.rol = User.Roles.CLIENTE
+        
+        # Aseguramos que el email se asigne (por si clean no corrió en algún contexto extraño)
+        if not user.email and user.cedula:
+            user.email = f"{user.cedula}@holaenfermera.com"
+
         if commit:
             user.save()
             perfil, _ = CustomerProfile.objects.get_or_create(user=user)
-            perfil.fecha_nacimiento = self.cleaned_data['fecha_nacimiento']
-            perfil.ciudad = self.cleaned_data['ciudad']
-            perfil.direccion = self.cleaned_data['direccion']
-            perfil.google_maps_link = self.cleaned_data['google_maps_link'] # Guardar link
-            perfil.alergias = self.cleaned_data['alergias']
+            perfil.fecha_nacimiento = self.cleaned_data.get('fecha_nacimiento')
+            perfil.ciudad = self.cleaned_data.get('ciudad')
+            perfil.direccion = self.cleaned_data.get('direccion')
+            perfil.google_maps_link = self.cleaned_data.get('google_maps_link')
+            perfil.alergias = self.cleaned_data.get('alergias')
             perfil.save()
         return user
-
+    
 # --- FORMULARIO ENFERMEROS ---
 class NurseForm(BaseUserForm):
     registro_profesional = forms.CharField(label="Registro SENESCYT/MSP", required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))

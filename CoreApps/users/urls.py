@@ -1,7 +1,7 @@
 from django.urls import path
 from django.contrib.auth.views import LogoutView
 from .views import CustomLoginView, PublicNurseListAPIView, QuickCreatePatientView
-from .views import PatientListView, PatientCreateView, PatientUpdateView, NurseListView, NurseCreateView, NurseUpdateView
+from .views import PatientListView, PatientCreateView, PatientUpdateView, NurseListView, NurseCreateView, NurseUpdateView, PatientDeleteView
 urlpatterns = [
     # La ruta es vacía aquí porque la incluiremos con el prefijo 'login/' en el config principal, 
     # O podemos definirla explícitamente aquí. 
@@ -20,6 +20,7 @@ urlpatterns = [
     path('dashboard/pacientes/', PatientListView.as_view(), name='admin_patient_list'),
     path('dashboard/pacientes/nuevo/', PatientCreateView.as_view(), name='admin_patient_create'),
     path('dashboard/pacientes/editar/<int:pk>/', PatientUpdateView.as_view(), name='admin_patient_update'),
+    path('dashboard/pacientes/eliminar/<int:pk>/', PatientDeleteView.as_view(), name='admin_patient_delete'),
 
     # ENFERMEROS
     path('dashboard/personal/', NurseListView.as_view(), name='admin_nurse_list'),

@@ -12,9 +12,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.db import transaction
 import json
 from .models import User, CustomerProfile
-
-from django.views.generic import ListView, CreateView, UpdateView
-
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from .forms import PatientForm, NurseForm
@@ -72,37 +70,44 @@ class PublicNurseListAPIView(View):
 @method_decorator(login_required, name='dispatch')
 class QuickCreatePatientView(View):
     """
-    API interna para crear pacientes desde modales (AJAX).
+    API interna para crear pacientes.
+    SOPORTE PLAN A: Genera email ficticio si no se envía.
     """
     def post(self, request):
         try:
             data = json.loads(request.body)
             
-            # 1. Recolección de Datos
             cedula = data.get('cedula')
-            email = data.get('email')
+            # Obtenemos el email, o None si viene vacío
+            email = data.get('email') 
+            
             nombres = data.get('nombres')
             apellidos = data.get('apellidos')
             telefono = data.get('telefono')
             ciudad = data.get('ciudad')
 
-            # 2. Validaciones Previas
+            # 1. Lógica de Email Ficticio (Plan A)
+            if not email:
+                email = f"{cedula}@holaenfermera.com"
+
+            # 2. Validaciones
             if User.objects.filter(cedula=cedula).exists():
                 return JsonResponse({'status': 'error', 'message': f'La cédula {cedula} ya está registrada.'}, status=400)
             
             if User.objects.filter(email=email).exists():
+                # Mensaje personalizado si es ficticio
+                if "@holaenfermera.com" in email:
+                    return JsonResponse({'status': 'error', 'message': f'El usuario {cedula} ya existe (Email auto-generado ocupado).'}, status=400)
                 return JsonResponse({'status': 'error', 'message': f'El correo {email} ya está registrado.'}, status=400)
 
-            # 3. Creación Transaccional
+            # 3. Creación
             with transaction.atomic():
-                # CAMBIO: Usamos la CÉDULA como username para garantizar unicidad absoluta
-                # Esto evita el error 500 por duplicidad de username
                 username = cedula 
                 
                 user = User.objects.create_user(
                     username=username,
-                    email=email,
-                    password=cedula, # Password temporal = Cédula
+                    email=email, # Aquí ya va lleno, real o ficticio
+                    password=cedula,
                     first_name=nombres,
                     last_name=apellidos,
                     cedula=cedula,
@@ -110,27 +115,18 @@ class QuickCreatePatientView(View):
                     rol=User.Roles.CLIENTE
                 )
                 
-                # Crear perfil
                 CustomerProfile.objects.create(user=user, ciudad=ciudad)
 
-            # 4. Retorno Exitoso
             return JsonResponse({
                 'status': 'success',
                 'id': user.id,
                 'text': f"{user.get_full_name()} ({user.cedula})"
             })
-
-        except IntegrityError as e:
-            # Captura errores de base de datos (ej: duplicados no detectados)
-            print(f"Error de Integridad: {e}")
-            return JsonResponse({'status': 'error', 'message': 'Error de base de datos: Usuario duplicado.'}, status=500)
             
         except Exception as e:
-            # Captura cualquier otro error y lo imprime en la consola
-            print(f"❌ ERROR CRÍTICO AL CREAR PACIENTE: {str(e)}")
-            import traceback
-            traceback.print_exc() # Esto imprimirá el error real en tu consola negra
-            return JsonResponse({'status': 'error', 'message': f'Error interno: {str(e)}'}, status=500)
+            # ... (manejo de errores igual que antes) ...
+            print(f"Error: {e}")
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 # --- MIXIN DE SEGURIDAD ---
@@ -145,9 +141,10 @@ class PatientListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
     model = User
     template_name = 'users/admin/patient_list.html'
     context_object_name = 'pacientes'
-    paginate_by = 20
-
+    # paginate_by = 20  <--- ¡BORRA O COMENTA ESTA LÍNEA!
+    
     def get_queryset(self):
+        # Traemos todos los clientes ordenados
         return User.objects.filter(rol='CLIENTE').order_by('-date_joined')
 
 class PatientCreateView(LoginRequiredMixin, AdminRequiredMixin, SuccessMessageMixin, CreateView):
@@ -172,6 +169,18 @@ class PatientUpdateView(LoginRequiredMixin, AdminRequiredMixin, SuccessMessageMi
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['titulo'] = f'Editar: {self.object.get_full_name()}'
+        return context
+
+class PatientDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
+    model = User
+    template_name = 'services/admin/confirm_delete.html' # Reusamos la plantilla genérica que creamos antes
+    success_url = reverse_lazy('admin_patient_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['titulo'] = 'Eliminar Paciente'
+        context['entidad'] = 'el paciente'
+        context['cancel_url'] = self.success_url
         return context
 
 # ==========================

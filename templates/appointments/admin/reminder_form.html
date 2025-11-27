@@ -326,11 +326,12 @@
                 const errorDiv = document.getElementById('quick-error-msg');
                 if (errorDiv) errorDiv.classList.add('hidden');
 
-                // B. Validación Simple
-                if (!qp_cedula || !qp_nombres || !qp_apellidos || !qp_email) {
-                    alert("Por favor completa Cédula, Nombres, Apellidos y Email.");
+                // Validación: Ya NO exigimos el email
+                if (!qp_cedula || !qp_nombres || !qp_apellidos) {
+                    alert("Por favor completa los campos obligatorios (*): Cédula, Nombres y Apellidos.");
                     return;
                 }
+                // El email se envía vacío y el backend se encarga
 
                 // C. Payload
                 const payload = {
