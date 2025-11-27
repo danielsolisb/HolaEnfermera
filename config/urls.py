@@ -33,6 +33,7 @@ urlpatterns = [
     # Esto hace que las rutas queden como: 
     # localhost:8000/citas/api/availability/
     path('citas/', include('CoreApps.appointments.urls')),
+    path('', include('CoreApps.services.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

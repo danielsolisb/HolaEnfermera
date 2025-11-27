@@ -1,0 +1,64 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% block title %}Servicios{% endblock %}
+{% block page_title %}Catálogo de Servicios{% endblock %}
+{% block breadcrumb %}<li class="active">Servicios</li>{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <div class="panel-control">
+            <a href="{% url 'admin_service_create' %}" class="btn btn-primary"><i class="demo-pli-add"></i> Nuevo Servicio</a>
+        </div>
+        <h3 class="panel-title">Oferta de Servicios</h3>
+    </div>
+    <div class="panel-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">Nombre</th>
+                        <th style="width: 15%;">Precio Base</th>
+                        <th style="width: 15%;">Costo Insumos</th>
+                        <th style="width: 15%;">Duración</th>
+                        <th style="width: 10%;">Estado</th>
+                        <th class="text-center" style="width: 15%;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in servicios %}
+                    <tr>
+                        <td><span class="text-bold">{{ s.nombre }}</span></td>
+                        <td>${{ s.precio_base }}</td>
+                        <td>
+                            {% if s.incluye_insumos_por_defecto %}
+                                <span class="label label-success">Incluido</span>
+                            {% else %}
+                                ${{ s.precio_insumos }}
+                            {% endif %}
+                        </td>
+                        <td>{{ s.duracion_horas }} horas</td>
+                        <td>
+                            {% if s.activo %}
+                                <span class="label label-primary">Activo</span>
+                            {% else %}
+                                <span class="label label-default">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'admin_service_update' s.pk %}" class="btn btn-sm btn-default btn-hover-primary">
+                                <i class="demo-pli-pen-5"></i>
+                            </a>
+                            <a href="{% url 'admin_service_delete' s.pk %}" class="btn btn-sm btn-default btn-hover-danger">
+                                <i class="demo-pli-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center">No hay servicios registrados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

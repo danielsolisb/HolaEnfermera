@@ -1,0 +1,52 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}{{ titulo }}{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block breadcrumb %}
+    <li><a href="{% url 'admin_service_list' %}">Servicios</a></li>
+    <li><a href="{% url 'admin_category_list' %}">Categorías</a></li>
+    <li class="active">Formulario</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 col-lg-offset-3"> <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Datos de la Categoría</h3>
+            </div>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="panel-body">
+                    
+                    <div class="form-group">
+                        <label class="control-label text-bold">Nombre <span class="text-danger">*</span></label>
+                        {{ form.nombre }}
+                        <small class="text-muted">Ej: Vacunación, Sueroterapia, Cuidados Paliativos.</small>
+                    </div>
+
+                    <hr>
+
+                    <div class="form-group">
+                        <label class="control-label text-bold">Ícono o Imagen Representativa</label>
+                        <div class="row">
+                            <div class="col-xs-12">
+                                {{ form.icono }}
+                            </div>
+                        </div>
+                        <small class="text-muted">Se mostrará en el menú público de selección.</small>
+                    </div>
+
+                </div>
+
+                <div class="panel-footer text-right">
+                    <a href="{% url 'admin_category_list' %}" class="btn btn-default">Cancelar</a>
+                    <button type="submit" class="btn btn-purple">Guardar Categoría</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

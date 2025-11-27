@@ -1,0 +1,64 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% block title %}Personal{% endblock %}
+{% block page_title %}Equipo de Enfermería{% endblock %}
+{% block breadcrumb %}<li class="active">Personal</li>{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <div class="panel-control">
+            <a href="{% url 'admin_nurse_create' %}" class="btn btn-purple"><i class="demo-pli-add"></i> Nuevo Enfermero</a>
+        </div>
+        <h3 class="panel-title">Staff Activo</h3>
+    </div>
+    <div class="panel-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Enfermero/a</th>
+                        
+                        <th style="width: 15%;">Registro Prof.</th>
+                        
+                        <th style="width: 25%;">Zona</th>
+                        <th style="width: 15%;">Transporte</th>
+                        <th style="width: 10%;">Estado</th>
+                        <th class="text-center" style="width: 10%;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in enfermeros %}
+                    <tr>
+                        <td>
+                            <img src="{% if e.foto %}{{ e.foto.url }}{% else %}/static/img/profile-photos/user.png{% endif %}" class="img-circle img-xs m-r-10">
+                            <span class="text-bold">{{ e.get_full_name }}</span>
+                        </td>
+                        <td>{{ e.perfil_enfermero.registro_profesional|default:"N/A" }}</td>
+                        <td>{{ e.perfil_enfermero.zona_cobertura }}</td>
+                        <td>
+                            {% if e.perfil_enfermero.es_motorizado %}
+                                <span class="badge badge-success"><i class="fa fa-motorcycle"></i> Sí</span>
+                            {% else %}
+                                <span class="badge badge-gray">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if e.is_active %}
+                                <span class="label label-success">Activo</span>
+                            {% else %}
+                                <span class="label label-danger">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'admin_nurse_update' e.pk %}" class="btn btn-sm btn-default"><i class="demo-pli-pen-5"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6">No hay personal registrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -9,91 +9,107 @@
                         <div class="profile-wrap text-center">
                             <div class="pad-btm">
                                 {% if user.foto %}
-                                <img class="img-circle img-md" src="{{ user.foto.url }}" alt="Perfil">
+                                    <img class="img-circle img-md" src="{{ user.foto.url }}" alt="Foto">
                                 {% else %}
-                                <img class="img-circle img-md" src="{% static 'img/profile-photos/user.png' %}"
-                                    alt="Perfil">
+                                    <img class="img-circle img-md" src="{% static 'img/profile-photos/user.png' %}" alt="Foto">
                                 {% endif %}
                             </div>
                             <a href="#profile-nav" class="box-block" data-toggle="collapse" aria-expanded="false">
-                                <p class="mnp-name">{{ user.get_full_name|default:user.email }}</p>
-                                <span class="mnp-desc">{{ user.get_rol_display }}</span>
+                                <p class="mnp-name">{{ user.get_full_name }}</p>
+                                <span class="mnp-desc">{{ user.rol }}</span>
                             </a>
                         </div>
                     </div>
 
                     <ul id="mainnav-menu" class="list-group">
 
-                        <li class="active-link">
-                            <a href="{% url 'dashboard' %}">
-                                <i class="demo-pli-home"></i>
-                                <span class="menu-title">Panel Principal</span>
-                            </a>
-                        </li>
+    <li class="active-link">
+        <a href="{% url 'dashboard' %}">
+            <i class="demo-pli-home"></i>
+            <span class="menu-title">Inicio</span>
+        </a>
+    </li>
 
-                        {% if user.is_staff %}
-                        <li class="list-header">Gestión</li>
+    {% if user.rol in 'ADMINISTRADOR,SUPERADMIN,SUPERVISOR' or user.is_superuser %}
+        
+        <li class="list-divider"></li>
+        <li class="list-header">Gestión</li>
 
-                        <li>
-                            <a href="#">
-                                <i class="fa fa-calendar"></i>
-                                <span class="menu-title">Agenda Global</span>
-                                <i class="arrow"></i>
-                            </a>
-                            <ul class="collapse">
-                                <li><a href="#">Ver Calendario</a></li>
-                                <li><a href="#">Nueva Cita Manual</a></li>
-                            </ul>
-                        </li>
+        <li>
+            <a href="#">
+                <i class="demo-pli-calendar-4"></i>
+                <span class="menu-title">Citas</span>
+                <i class="arrow"></i>
+            </a>
+            <ul class="collapse">
+                <li><a href="#">Calendario General</a></li>
+                
+                <li><a href="#">Historial Completo</a></li>
+            </ul>
+        </li>
 
-                        <li>
-                            <a href="#">
-                                <i class="fa fa-users"></i>
-                                <span class="menu-title">Usuarios</span>
-                                <i class="arrow"></i>
-                            </a>
-                            <ul class="collapse">
-                                <li><a href="#">Pacientes</a></li>
-                                <li><a href="#">Enfermeros</a></li>
-                            </ul>
-                        </li>
+        <li>
+            <a href="{% url 'admin_reminder_list' %}">
+                <i class="demo-pli-mail"></i>
+                <span class="menu-title">Buzón de Leads</span>
+            </a>
+        </li>
 
-                        {% if user.is_superuser %}
-                        <li>
-                            <a href="/admin/" target="_blank">
-                                <i class="fa fa-cogs"></i>
-                                <span class="menu-title">Configuración Técnica</span>
-                            </a>
-                        </li>
-                        {% endif %}
-                        {% endif %}
+       <li>
+            <a href="#">
+                <i class="demo-pli-male-female"></i>
+                <span class="menu-title">Usuarios</span>
+                <i class="arrow"></i>
+            </a>
+            <ul class="collapse">
+                <li><a href="{% url 'admin_patient_list' %}">Pacientes</a></li>
+                <li><a href="{% url 'admin_nurse_list' %}">Enfermeros</a></li>
+                </ul>
+        </li>
 
-                        {% if user.rol == 'ENFERMERO' %}
-                        <li class="list-header">Mi Trabajo</li>
-                        <li>
-                            <a href="#">
-                                <i class="fa fa-list-alt"></i>
-                                <span class="menu-title">Mis Citas Hoy</span>
-                                <span class="pull-right badge badge-warning">3</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#">
-                                <i class="fa fa-clock-o"></i>
-                                <span class="menu-title">Mi Disponibilidad</span>
-                            </a>
-                        </li>
-                        {% endif %}
+        <li class="list-divider"></li>
+        <li class="list-header">Configuración</li>
 
-                        <li class="list-divider"></li>
+        <li>
+            <a href="#">
+                <i class="demo-pli-gear"></i>
+                <span class="menu-title">Catálogos</span>
+                <i class="arrow"></i>
+            </a>
+            <ul class="collapse">
+                <li><a href="{% url 'admin_category_list' %}">Categorías</a></li>
+                <li><a href="{% url 'admin_service_list' %}">Servicios y Precios</a></li>
+                <li><a href="{% url 'admin_medication_list' %}">Medicamentos</a></li>
+            </ul>
+        </li>
 
-                        <li>
-                            <a href="{% url 'logout' %}">
-                                <i class="fa fa-sign-out"></i>
-                                <span class="menu-title">Cerrar Sesión</span>
-                            </a>
-                        </li>
-                    </ul>
+    {% endif %}
+    
+    {% if user.rol == 'ENFERMERO' %}
+        <li class="list-divider"></li>
+        <li class="list-header">Mi Trabajo</li>
+        <li>
+            <a href="#">
+                <i class="demo-pli-calendar-4"></i>
+                <span class="menu-title">Mis Visitas de Hoy</span>
+                <span class="pull-right badge badge-warning">3</span>
+            </a>
+        </li>
+    {% endif %}
+
+    {% if user.rol == 'CLIENTE' %}
+        <li class="list-divider"></li>
+        <li class="list-header">Mi Salud</li>
+        <li>
+            <a href="#">
+                <i class="demo-pli-medication"></i>
+                <span class="menu-title">Mis Tratamientos</span>
+            </a>
+        </li>
+    {% endif %}
+
+</ul>
+
                 </div>
             </div>
         </div>

@@ -1,7 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,50 +9,47 @@
     <title>{% block title %}Dashboard | Hola Enfermera{% endblock %}</title>
 
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700' rel='stylesheet' type='text/css'>
-
+    
     <link href="{% static 'css-auralis/bootstrap.min.css' %}" rel="stylesheet">
     <link href="{% static 'css-auralis/nifty.min.css' %}" rel="stylesheet">
     <link href="{% static 'css-auralis/demo/nifty-demo-icons.min.css' %}" rel="stylesheet">
-    <link href="{% static 'plugins/font-awesome/css/font-awesome.min.css' %}" rel="stylesheet">
-
-    <link href="{% static 'css/dashboard.css' %}" rel="stylesheet">
 
     <link href="{% static 'plugins/pace/pace.min.css' %}" rel="stylesheet">
-    <script src="{% static 'plugins/pace/pace.min.js' %}"></script>
+    
+    <link href="{% static 'css-auralis/themes/type-c/theme-navy.min.css' %}" rel="stylesheet">
+
+    <link href="{% static 'css/dashboard.css' %}" rel="stylesheet">
 
     {% block extra_css %}{% endblock %}
 </head>
 
 <body>
-    <div id="container" class="effect aside-float aside-bright mainnav-lg">
-
+    <div id="container" class="effect aside-float aside-dark mainnav-lg navbar-fixed">
+        
         {% include 'includes/dashboard/navbar.html' %}
+        
         <div class="boxed">
-
             <div id="content-container">
                 <div id="page-head">
                     <div id="page-title">
-                        <h1 class="page-header text-overflow">{% block page_header %}{% endblock %}</h1>
+                        <h1 class="page-header text-overflow">{% block page_title %}Resumen{% endblock %}</h1>
                     </div>
+                    <ol class="breadcrumb">
+                        <li><a href="{% url 'dashboard' %}"><i class="demo-pli-home"></i></a></li>
+                        {% block breadcrumb %}{% endblock %}
+                    </ol>
                 </div>
 
                 <div id="page-content">
-                    {% if messages %}
-                    {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade in">
-                        <button class="close" data-dismiss="alert"><span>&times;</span></button>
-                        {{ message }}
-                    </div>
-                    {% endfor %}
-                    {% endif %}
-
                     {% block content %}{% endblock %}
                 </div>
             </div>
+
             {% include 'includes/dashboard/menu.html' %}
         </div>
 
         {% include 'includes/dashboard/footer.html' %}
+
         <button class="scroll-top btn">
             <i class="pci-chevron chevron-up"></i>
         </button>
@@ -62,8 +58,8 @@
     <script src="{% static 'js/jquery.min.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
     <script src="{% static 'js/nifty.min.js' %}"></script>
+    <script src="{% static 'plugins/pace/pace.min.js' %}"></script>
 
     {% block extra_js %}{% endblock %}
 </body>
-
 </html>

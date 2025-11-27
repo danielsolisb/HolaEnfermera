@@ -13,10 +13,16 @@ from CoreApps.services.models import Service
 
 from django.shortcuts import render, redirect
 
-
 from django.contrib.auth import get_user_model
 from CoreApps.users.models import User
 
+# --- IMPORTS NECESARIOS (Añádelos arriba si faltan) ---
+from django.views.generic import ListView, UpdateView, CreateView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.urls import reverse_lazy
+from django.db.models import Q
+from .forms import AppointmentReminderForm
+from .models import AppointmentReminder
 
 
 
@@ -249,3 +255,61 @@ class ReminderSuccessView(View):
     def get(self, request):
         # Pasamos 'step': 3 para indicar que todo el proceso finalizó
         return render(request, self.template_name, {'step': 3})
+
+#---------------------------------------
+
+# --- MIXIN DE SEGURIDAD (Solo Admins) ---
+class AdminRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        user = self.request.user
+        return user.is_authenticated and (user.rol in ['ADMINISTRADOR', 'SUPERADMIN'] or user.is_superuser)
+
+# --- VISTAS ---
+
+class AdminReminderListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
+    model = AppointmentReminder
+    template_name = 'appointments/admin/reminder_list.html'
+    context_object_name = 'recordatorios'
+    paginate_by = 20
+
+    def get_queryset(self):
+        # Ordenamos: Primero los pendientes más antiguos
+        return AppointmentReminder.objects.all().order_by('estado', 'fecha_limite_sugerida')
+
+class AdminReminderUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
+    model = AppointmentReminder
+    form_class = AppointmentReminderForm
+    template_name = 'appointments/admin/reminder_form.html'
+    success_url = reverse_lazy('admin_reminder_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['titulo'] = 'Gestionar Recordatorio'
+        
+        # Serializamos la info de medicamentos para usarla en JS
+        meds = Medication.objects.filter(activo=True)
+        med_dict = {
+            med.id: {'valor': med.frecuencia_valor, 'unidad': med.frecuencia_unidad} 
+            for med in meds
+        }
+        context['medicamentos_json'] = json.dumps(med_dict)
+        return context
+
+class AdminReminderCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
+    model = AppointmentReminder
+    form_class = AppointmentReminderForm
+    template_name = 'appointments/admin/reminder_form.html'
+    success_url = reverse_lazy('admin_reminder_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['titulo'] = 'Crear Nuevo Recordatorio Manual'
+        
+        # Serializamos la info de medicamentos para usarla en JS
+        meds = Medication.objects.filter(activo=True)
+        med_dict = {
+            med.id: {'valor': med.frecuencia_valor, 'unidad': med.frecuencia_unidad} 
+            for med in meds
+        }
+        context['medicamentos_json'] = json.dumps(med_dict)
+        return context

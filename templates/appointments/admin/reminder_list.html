@@ -1,0 +1,109 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Recordatorios{% endblock %}
+{% block page_title %}Buzón de Recordatorios y Leads{% endblock %}
+
+{% block breadcrumb %}
+    <li class="active">Recordatorios</li>
+{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <div class="panel-control">
+            <a href="{% url 'admin_reminder_create' %}" class="btn btn-primary">
+                <i class="demo-pli-plus"></i> Nuevo Manual
+            </a>
+        </div>
+        <h3 class="panel-title">Listado de Solicitudes</h3>
+    </div>
+
+    <div class="panel-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-vcenter">
+                <thead>
+                    <tr>
+                        <th>Estado</th>
+                        <th>Paciente</th>
+                        <th>Medicamento / Servicio</th>
+                        <th>Fecha Límite</th>
+                        <th>Origen</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in recordatorios %}
+                    <tr>
+                        <td>
+                            {% if item.estado == 'PENDIENTE' %}
+                                <span class="label label-warning">Pendiente</span>
+                            {% elif item.estado == 'AGENDADO' %}
+                                <span class="label label-success">Agendado</span>
+                            {% elif item.estado == 'CONTACTADO' %}
+                                <span class="label label-info">Contactado</span>
+                            {% else %}
+                                <span class="label label-default">{{ item.estado }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="text-bold">{{ item.paciente.get_full_name }}</span><br>
+                            <small class="text-muted">{{ item.paciente.telefono }}</small>
+                        </td>
+                        <td>
+                            {% if item.medicamento_catalogo %}
+                                <i class="fa fa-medkit text-danger"></i> {{ item.medicamento_catalogo.nombre }}
+                            {% else %}
+                                <i class="fa fa-tag text-muted"></i> {{ item.medicamento_externo|default:"General" }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.fecha_limite_sugerida %}
+                                {{ item.fecha_limite_sugerida|date:"d M, Y" }}
+                            {% else %}
+                                <span class="text-muted">--</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.origen == 'WEB' %}
+                                <span class="badge badge-mint">Web (Lead)</span>
+                            {% else %}
+                                <span class="badge badge-dark">Sistema</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'admin_reminder_update' item.pk %}" class="btn btn-sm btn-default btn-hover-warning" data-toggle="tooltip" title="Gestionar">
+                                <i class="demo-pli-pen-5"></i> Gestionar
+                            </a>
+                            {% if item.paciente.telefono %}
+                            <a href="https://wa.me/{{ item.paciente.telefono|cut:'+' }}?text=Hola {{ item.paciente.first_name }}, le escribimos de HolaEnfermera..." target="_blank" class="btn btn-sm btn-success">
+                                <i class="fa fa-whatsapp"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">No hay recordatorios pendientes.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if is_paginated %}
+        <div class="text-right">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                    <li><a href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+                {% endif %}
+                <li class="active"><a href="#">{{ page_obj.number }}</a></li>
+                {% if page_obj.has_next %}
+                    <li><a href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

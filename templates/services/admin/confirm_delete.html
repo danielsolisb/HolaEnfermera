@@ -1,0 +1,61 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}{{ titulo }}{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 col-md-offset-3">
+        
+        <div class="panel panel-danger">
+            
+            <div class="panel-heading">
+                <h3 class="panel-title">
+                    <i class="fa fa-exclamation-triangle"></i> Confirmar Eliminación
+                </h3>
+            </div>
+
+            <div class="panel-body text-center pad-all">
+                
+                {% if error_message %}
+                    <div class="text-danger mar-btm">
+                        <i class="demo-pli-close icon-5x"></i>
+                    </div>
+                    <h4 class="text-danger">No se puede eliminar</h4>
+                    <p class="text-lg text-muted mar-btm">
+                        {{ error_message }}
+                    </p>
+                    <div class="pad-top">
+                        <a href="{{ cancel_url }}" class="btn btn-primary btn-lg">Entendido, volver</a>
+                    </div>
+                
+                {% else %}
+                    <div class="text-warning mar-btm">
+                        <i class="demo-pli-question icon-5x"></i>
+                    </div>
+                    
+                    <p class="text-lg text-semibold mar-btm">
+                        ¿Estás seguro de que deseas eliminar {{ entidad }}?
+                    </p>
+                    
+                    <div class="well well-sm bg-gray-light text-left mar-btm">
+                        <strong class="text-danger text-2x">{{ object }}</strong>
+                        <br>
+                        <small class="text-muted">Esta acción borrará el registro permanentemente.</small>
+                    </div>
+
+                    <form method="post" class="pad-top">
+                        {% csrf_token %}
+                        <a href="{{ cancel_url }}" class="btn btn-default btn-lg mar-rgt">Cancelar</a>
+                        <button type="submit" class="btn btn-danger btn-lg btn-labeled">
+                            <i class="btn-label demo-pli-trash"></i> Sí, Eliminar
+                        </button>
+                    </form>
+                {% endif %}
+
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

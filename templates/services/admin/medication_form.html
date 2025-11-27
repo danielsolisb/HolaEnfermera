@@ -1,0 +1,59 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load widget_tweaks %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 col-lg-offset-2">
+        <div class="panel">
+            <form method="post" class="form-horizontal">
+                {% csrf_token %}
+                <div class="panel-body">
+                    <h4 class="text-main text-bold">Datos del Medicamento</h4>
+                    
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label text-bold">Nombre Comercial</label>
+                        <div class="col-sm-9">{{ form.nombre }}</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Descripción</label>
+                        <div class="col-sm-9">{{ form.descripcion }}</div>
+                    </div>
+
+                    <hr>
+                    <h4 class="text-main text-bold">Reglas de Recordatorio</h4>
+                    <p class="text-muted pad-hor mar-btm">Esto define cuándo el sistema sugerirá la próxima cita automáticamente.</p>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label text-bold">Frecuencia</label>
+                        <div class="col-sm-3">
+                            <div class="input-group">
+                                <span class="input-group-addon">Cada</span>
+                                {{ form.frecuencia_valor }}
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            {{ form.frecuencia_unidad }}
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="col-sm-offset-3 col-sm-9">
+                            <div class="checkbox">
+                                <label>{{ form.activo }} <strong>Visible en el Buscador Público</strong></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel-footer text-right">
+                    <a href="{% url 'admin_medication_list' %}" class="btn btn-default">Cancelar</a>
+                    <button type="submit" class="btn btn-purple">Guardar Medicamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

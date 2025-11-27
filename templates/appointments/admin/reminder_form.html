@@ -1,0 +1,423 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}{{ titulo }}{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block breadcrumb %}
+    <li><a href="{% url 'admin_reminder_list' %}">Recordatorios</a></li>
+    <li class="active">Formulario</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* --- ESTILOS ROBUSTOS PARA EL SWITCH --- */
+    /* 1. El contenedor (La caja del interruptor) */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px;
+        margin-bottom: 0; /* Evitar conflictos con Bootstrap */
+        vertical-align: middle;
+    }
+
+    /* 2. Esconder el input original (checkbox feo) */
+    .switch input { 
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    /* 3. El deslizador (La parte visual) */
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc; /* Gris apagado por defecto */
+        -webkit-transition: .4s;
+        transition: .4s;
+        border-radius: 34px; /* Bordes redondos */
+    }
+
+    /* 4. La bolita blanca */
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        -webkit-transition: .4s;
+        transition: .4s;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    /* 5. Estado ACTIVADO (Azul Navy) */
+    input:checked + .slider {
+        background-color: #25476a;
+    }
+
+    /* 6. Movimiento de la bolita al activar */
+    input:checked + .slider:before {
+        -webkit-transform: translateX(24px);
+        -ms-transform: translateX(24px);
+        transform: translateX(24px);
+    }
+
+    /* Ajuste del contenedor padre para alineación */
+    .switch-container {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        height: 100%;
+        padding-top: 5px; /* Pequeño ajuste visual */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 col-lg-offset-2">
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Datos del Recordatorio</h3>
+            </div>
+            
+            <form method="post" class="form-horizontal">
+                {% csrf_token %}
+                <div class="panel-body">
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Paciente</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                {{ form.paciente }}
+                                <span class="input-group-btn">
+                                    <button class="btn btn-success" type="button" data-toggle="modal" data-target="#modal-quick-patient">
+                                        <i class="fa fa-plus"></i> Nuevo
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h4 class="pad-hor mar-btm text-thin">Cálculo de Próxima Dosis</h4>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Medicamento</label>
+                        <div class="col-sm-9">
+                            {{ form.medicamento_catalogo }}
+                            <div class="mar-top">
+                                <label class="text-muted text-sm">O externo (sin cálculo automático):</label>
+                                {{ form.medicamento_externo }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group bg-gray-light pad-all" style="border-radius: 5px;">
+                        <label class="col-sm-3 control-label text-bold text-main">Fecha de Aplicación</label>
+                        <div class="col-sm-5">
+                            {{ form.fecha_aplicacion }}
+                            <span class="help-block">¿Cuándo se puso la dosis actual?</span>
+                        </div>
+                        
+                        <div class="col-sm-4">
+                            <div class="switch-container">
+                                <span class="text-bold text-main">Auto-Calcular</span>
+                                <label class="switch">
+                                    <input id="switch-auto-calc" type="checkbox" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label text-bold text-primary">Próxima Dosis (Sugerida)</label>
+                        <div class="col-sm-9">
+                            {{ form.fecha_limite_sugerida }}
+                            <span id="calc-info" class="text-info text-xs text-bold"></span>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Estado</label>
+                        <div class="col-sm-9">
+                            {{ form.estado }}
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Notas</label>
+                        <div class="col-sm-9">
+                            {{ form.notas }}
+                        </div>
+                    </div>
+
+                </div>
+                <div class="panel-footer text-right">
+                    <a href="{% url 'admin_reminder_list' %}" class="btn btn-default">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Guardar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-quick-patient" role="dialog" tabindex="-1" aria-labelledby="modal-quick-patient-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><i class="pci-cross pci-circle"></i></button>
+                <h4 class="modal-title" id="modal-quick-patient-label">Nuevo Paciente Rápido</h4>
+            </div>
+
+            <div class="modal-body">
+                <div id="quick-error-msg" class="alert alert-danger hidden"></div>
+                
+                <form id="form-quick-patient" class="form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Cédula *</label>
+                        <div class="col-sm-9">
+                            <input type="text" id="qp_cedula" class="form-control" required maxlength="10">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Nombres *</label>
+                        <div class="col-sm-9">
+                            <input type="text" id="qp_nombres" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Apellidos *</label>
+                        <div class="col-sm-9">
+                            <input type="text" id="qp_apellidos" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Email *</label>
+                        <div class="col-sm-9">
+                            <input type="email" id="qp_email" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Teléfono</label>
+                        <div class="col-sm-9">
+                            <input type="text" id="qp_telefono" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Ciudad</label>
+                        <div class="col-sm-9">
+                            <input type="text" id="qp_ciudad" class="form-control">
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-save-patient">Guardar Paciente</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Datos para el cálculo de fechas (Esto se mantiene igual)
+        const medData = {{ medicamentos_json|safe }};
+        
+        const selectMed = document.getElementById('id_medicamento_catalogo');
+        const inputAppDate = document.getElementById('id_fecha_aplicacion');
+        const inputTargetDate = document.getElementById('id_fecha_limite_sugerida');
+        const switchAuto = document.getElementById('switch-auto-calc');
+        const infoSpan = document.getElementById('calc-info');
+
+        // Función de Cálculo (Se mantiene igual)
+        function calculateDate() {
+            if (!switchAuto.checked) return;
+
+            const medId = selectMed.value;
+            const appDateVal = inputAppDate.value;
+
+            if (medId && appDateVal && medData[medId]) {
+                const freq = medData[medId];
+                const baseDate = new Date(appDateVal + 'T00:00:00');
+                let newDate = new Date(baseDate);
+
+                if (freq.unidad === 'DIAS') {
+                    newDate.setDate(baseDate.getDate() + freq.valor);
+                } else if (freq.unidad === 'MESES') {
+                    newDate.setMonth(baseDate.getMonth() + freq.valor);
+                } else if (freq.unidad === 'ANIOS') {
+                    newDate.setFullYear(baseDate.getFullYear() + freq.valor);
+                }
+
+                const yyyy = newDate.getFullYear();
+                const mm = String(newDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(newDate.getDate()).padStart(2, '0');
+                
+                inputTargetDate.value = `${yyyy}-${mm}-${dd}`;
+                infoSpan.innerText = `Calculado: +${freq.valor} ${freq.unidad.toLowerCase()}`;
+                inputTargetDate.readOnly = true;
+            } else {
+                infoSpan.innerText = "";
+            }
+        }
+
+        // Listeners de Cálculo
+        switchAuto.addEventListener('change', function() {
+            if (this.checked) {
+                inputTargetDate.readOnly = true;
+                inputTargetDate.classList.add('bg-gray-light'); 
+                calculateDate();
+            } else {
+                inputTargetDate.readOnly = false;
+                inputTargetDate.classList.remove('bg-gray-light');
+                infoSpan.innerText = "Modo Manual: Ingresa la fecha.";
+                inputTargetDate.focus();
+            }
+        });
+        selectMed.addEventListener('change', calculateDate);
+        inputAppDate.addEventListener('change', calculateDate);
+        
+        // Init Cálculo
+        if(switchAuto.checked) {
+            inputTargetDate.readOnly = true;
+            inputTargetDate.classList.add('bg-gray-light');
+        }
+
+        // ======================================================
+        // LÓGICA MODAL PACIENTE RÁPIDO (SOLUCIÓN DEFINITIVA)
+        // ======================================================
+        const btnSavePatient = document.getElementById('btn-save-patient');
+        
+        if (btnSavePatient) {
+            btnSavePatient.addEventListener('click', function(e) {
+                e.preventDefault(); 
+
+                // A. Referencias
+                const qp_cedula = document.getElementById('qp_cedula').value.trim();
+                const qp_nombres = document.getElementById('qp_nombres').value.trim();
+                const qp_apellidos = document.getElementById('qp_apellidos').value.trim();
+                const qp_email = document.getElementById('qp_email').value.trim();
+                const qp_telefono = document.getElementById('qp_telefono').value.trim();
+                const qp_ciudad = document.getElementById('qp_ciudad').value.trim();
+                
+                const errorDiv = document.getElementById('quick-error-msg');
+                if (errorDiv) errorDiv.classList.add('hidden');
+
+                // B. Validación Simple
+                if (!qp_cedula || !qp_nombres || !qp_apellidos || !qp_email) {
+                    alert("Por favor completa Cédula, Nombres, Apellidos y Email.");
+                    return;
+                }
+
+                // C. Payload
+                const payload = {
+                    cedula: qp_cedula,
+                    nombres: qp_nombres,
+                    apellidos: qp_apellidos,
+                    email: qp_email,
+                    telefono: qp_telefono,
+                    ciudad: qp_ciudad
+                };
+
+                // D. CSRF Token
+                const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+                const csrfToken = csrfInput ? csrfInput.value : '';
+
+                // E. UI Loading
+                const originalText = btnSavePatient.innerText;
+                btnSavePatient.disabled = true;
+                btnSavePatient.innerText = "Guardando...";
+
+                // F. Petición AJAX (SIMPLIFICADA Y SEGURA)
+                fetch("{% url 'api_quick_create_patient' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => {
+                    // Intentamos parsear JSON directamente, sin validar headers estrictos
+                    return response.json().then(data => {
+                        if (!response.ok) {
+                            // Si hay error 400/500, lanzamos error con mensaje del servidor
+                            throw new Error(data.message || "Error desconocido en servidor");
+                        }
+                        return data;
+                    });
+                })
+                .then(data => {
+                    // --- ÉXITO ---
+                    btnSavePatient.disabled = false;
+                    btnSavePatient.innerText = originalText;
+
+                    if (data.status === 'success') {
+                        // 1. Cerrar Modal
+                        $('#modal-quick-patient').modal('hide');
+
+                        // 2. Agregar al Select y Seleccionar
+                        const newOption = new Option(data.text, data.id, true, true);
+                        const selectPaciente = $('#id_paciente');
+                        selectPaciente.append(newOption).trigger('change');
+                        
+                        // Refrescar plugin gráfico si existe (Selectpicker)
+                        // Nota: Verificamos si el método existe antes de llamar
+                        if ($.fn.selectpicker && selectPaciente.hasClass('selectpicker')) {
+                            selectPaciente.selectpicker('refresh');
+                        }
+
+                        // 3. Limpiar inputs
+                        document.getElementById('form-quick-patient').reset();
+
+                    } else {
+                        // Error lógico (ej: duplicado)
+                        if (errorDiv) {
+                            errorDiv.innerText = data.message;
+                            errorDiv.classList.remove('hidden');
+                        } else {
+                            alert(data.message);
+                        }
+                    }
+                })
+                .catch(error => {
+                    // --- ERROR ---
+                    console.error("Error JS:", error);
+                    btnSavePatient.disabled = false;
+                    btnSavePatient.innerText = originalText;
+                    
+                    // Mostrar alerta amigable
+                    if (error.name === 'SyntaxError') {
+                        alert("Error: El servidor no devolvió una respuesta válida. Verifique si hay errores 500 en la consola.");
+                    } else {
+                        alert(error.message);
+                    }
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

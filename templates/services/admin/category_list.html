@@ -1,0 +1,69 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Categorías{% endblock %}
+{% block page_title %}Categorías de Servicios{% endblock %}
+{% block breadcrumb %}
+    <li><a href="{% url 'admin_service_list' %}">Servicios</a></li>
+    <li class="active">Categorías</li>
+{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <div class="panel-control">
+            <a href="{% url 'admin_category_create' %}" class="btn btn-purple">
+                <i class="demo-pli-add"></i> Nueva Categoría
+            </a>
+        </div>
+        <h3 class="panel-title">Clasificación de Servicios</h3>
+    </div>
+
+    <div class="panel-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-vcenter">
+                <thead>
+                    <tr>
+                        <th style="width: 10%;" class="text-center">Ícono</th>
+                        <th style="width: 70%;">Nombre de la Categoría</th>
+                        <th style="width: 20%;" class="text-center">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in categorias %}
+                    <tr>
+                        <td class="text-center">
+                            {% if c.icono %}
+                                <img src="{{ c.icono.url }}" class="img-circle img-sm" alt="icon">
+                            {% else %}
+                                <div class="img-circle img-sm bg-gray-light" style="display:inline-flex;align-items:center;justify-content:center;">
+                                    <i class="fa fa-medkit text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="text-bold text-lg">{{ c.nombre }}</span>
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'admin_category_update' c.pk %}" class="btn btn-sm btn-default btn-hover-primary" title="Editar">
+                                <i class="demo-pli-pen-5"></i>
+                            </a>
+                            <a href="{% url 'admin_category_delete' c.pk %}" class="btn btn-sm btn-default btn-hover-danger" title="Eliminar">
+                                <i class="demo-pli-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted pad-all">
+                            No hay categorías creadas. <br>
+                            <small>Crea una antes de registrar servicios (ej: Vacunación, Inyectología).</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

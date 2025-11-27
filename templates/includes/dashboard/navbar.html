@@ -1,113 +1,90 @@
 {% load static %}
-<!--NAVBAR-->
-        <!--===================================================-->
-        <header id="navbar">
-            <div id="navbar-container" class="boxed">
 
-                <!--Brand logo & name-->
-                <!--================================-->
-                <div class="navbar-header">
-                    <a href="{%url 'dashboard'%}" class="navbar-brand">
-                        <img src="{% static 'img-auralis/logo.png' %}" alt="Nifty Logo" class="brand-icon">
-                        <div class="brand-title">
-                            <span class="brand-text">Tivy</span>
-                        </div>
+<header id="navbar">
+    <div id="navbar-container" class="boxed">
+
+        <div class="navbar-header">
+            <a href="{% url 'dashboard' %}" class="navbar-brand">
+                
+                <div class="brand-custom-wrapper">
+                    
+                    <img src="{% static 'img/logo-hola-enfermera2.png' %}" 
+                         alt="Hola Enfermera" 
+                         class="logo-image logo-lg">
+                    
+                    <img src="{% static 'img/logo1_dash.png' %}" 
+                         alt="HE" 
+                         class="logo-image logo-sm">
+                         
+                </div>
+            </a>
+        </div>
+        <div class="navbar-content">
+            
+            <ul class="nav navbar-top-links pull-left">
+                <li class="tgl-menu-btn">
+                    <a class="mainnav-toggle" href="#">
+                        <i class="demo-pli-list-view"></i>
                     </a>
-                </div>
-                <!--================================-->
-                <!--End brand logo & name-->
+                </li>
+            </ul>
 
+            <ul class="nav navbar-top-links pull-right">
+                <li id="dropdown-user" class="dropdown">
+                    <a href="#" data-toggle="dropdown" class="dropdown-toggle text-right">
+                        <span class="ic-user pull-right">
+                            <i class="demo-pli-male"></i>
+                        </span>
+                        <div class="username hidden-xs">{{ user.first_name }}</div>
+                    </a>
 
-                <!--Navbar Dropdown-->
-                <!--================================-->
-                <div class="navbar-content">
-                    <ul class="nav navbar-top-links">
+                    <div class="dropdown-menu dropdown-menu-sm dropdown-menu-right panel-default">
+                        <ul class="head-list">
+                            <li><a href="#"><i class="demo-pli-male icon-lg icon-fw"></i> Perfil</a></li>
+                            <li><a href="#"><i class="demo-pli-mail icon-lg icon-fw"></i> Mensajes</a></li>
+                            <li><a href="{% url 'logout' %}"><i class="demo-pli-unlock icon-lg icon-fw"></i> Salir</a></li>
+                        </ul>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</header>
 
-                        <!--Navigation toogle button-->
-                        <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-                        <li class="tgl-menu-btn">
-                            <a class="mainnav-toggle" href="#">
-                                <i class="demo-pli-list-view"></i>
-                            </a>
-                        </li>
-                        <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-                        <!--End Navigation toogle button-->
+<style>
+    /* 1. Contenedor Wrapper: Centra todo perfectamente */
+    .brand-custom-wrapper {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;     /* Centro Vertical */
+        justify-content: center; /* Centro Horizontal */
+        position: relative;      /* Para control absoluto */
+    }
 
+    /* 2. Reglas Base para las Imágenes */
+    .logo-image {
+        max-height: 40px;    /* Altura máxima segura */
+        width: auto;         /* Ancho automático para no deformar */
+        object-fit: contain; /* Asegura que se vea entera */
+        transition: all 0.3s ease; /* Suaviza el cambio si fuera necesario */
+    }
 
+    /* 3. Lógica de Visibilidad (Usando las clases del BODY de Nifty) */
+    
+    /* ESTADO ABIERTO (mainnav-lg): Muestra Grande, Oculta Pequeño */
+    #container.mainnav-lg .logo-lg { display: block; }
+    #container.mainnav-lg .logo-sm { display: none; }
+    
+    /* ESTADO CERRADO (mainnav-sm): Oculta Grande, Muestra Pequeño */
+    #container.mainnav-sm .logo-lg { display: none; }
+    #container.mainnav-sm .logo-sm { 
+        display: block; 
+        max-height: 30px; /* Un pelín más chico para que entre en la barra delgada */
+    }
 
-                        <!--Search-->
-                        <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-                        <li>
-                            <div class="custom-search-form">
-                                <label class="btn btn-trans" for="search-input" data-toggle="collapse" data-target="#nav-searchbox">
-                                    <i class="demo-pli-magnifi-glass"></i>
-                                </label>
-                                <form>
-                                    <div class="search-container collapse" id="nav-searchbox">
-                                        <input id="search-input" type="text" class="form-control" placeholder="Type for search...">
-                                    </div>
-                                </form>
-                            </div>
-                        </li>
-                        <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-                        <!--End Search-->
-
-                    </ul>
-                    <ul class="nav navbar-top-links">
-
-                        
-
-
-
-                        <!--Notification dropdown-->
-                        <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-                        
-                        <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-                        <!--End notifications dropdown-->
-
-
-
-                        <!--User dropdown-->
-                        <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-                        <li id="dropdown-user" class="dropdown">
-                            <a href="#" data-toggle="dropdown" class="dropdown-toggle text-right">
-                                <span class="ic-user pull-right">
-                                    <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-                                    <!--You can use an image instead of an icon.-->
-                                    <!--<img class="img-circle img-user media-object" src="img/profile-photos/1.png" alt="Profile Picture">-->
-                                    <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-                                    <i class="demo-pli-male"></i>
-                                </span>
-                                <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-                                <!--You can also display a user name in the navbar.-->
-                                <!--<div class="username hidden-xs">Aaron Chavez</div>-->
-                                <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-                            </a>
-
-
-                            <div class="dropdown-menu dropdown-menu-sm dropdown-menu-right panel-default">
-                                <ul class="head-list">
-                                    <li>
-                                        <a href="#"><i class="demo-pli-male icon-lg icon-fw"></i> Profile</a>
-                                    </li>
-                                    
-                                    <li>
-                                        <a href="{%url 'logout'%}"><i class="demo-pli-unlock icon-lg icon-fw"></i> Logout</a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
-                        <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-                        <!--End user dropdown-->
- 
-                        
-                       
-                    </ul>
-                </div>
-                <!--================================-->
-                <!--End Navbar Dropdown-->
-
-            </div>
-        </header>
-        <!--===================================================-->
-        <!--END NAVBAR-->
+    /* AJUSTE EXTRA: Asegurar que Nifty no colapse el ancho del navbar-brand */
+    .navbar-brand {
+        padding: 0 !important; /* Quitamos padding del tema para que nuestro wrapper mande */
+    }
+</style>

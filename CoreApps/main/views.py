@@ -8,19 +8,26 @@ class LandingView(TemplateView):
 
 class DashboardView(LoginRequiredMixin, TemplateView):
     """
-    Panel Principal (Usa dashboard_base.html de Nifty).
-    Accesible para Administradores, Supervisores y Enfermeros.
+    Vista Dispatcher: Redirige al template correcto según el rol.
     """
-    template_name = 'main/dashboard/index.html'
-
-    def dispatch(self, request, *args, **kwargs):
-        # Validación extra de seguridad: Si es 'CLIENTE', no debería ver el dashboard interno
-        if request.user.is_authenticated and request.user.rol == 'CLIENTE':
-            return redirect('home') # O a un perfil de cliente simple
-        return super().dispatch(request, *args, **kwargs)
+    def get_template_names(self):
+        user = self.request.user
+        
+        # 1. ADMINISTRADORES (Admin, SuperAdmin, Supervisor)
+        if user.rol in ['ADMINISTRADOR', 'SUPERADMIN', 'SUPERVISOR'] or user.is_superuser:
+            return ['main/dashboard/admin_home.html']
+        
+        # 2. ENFERMEROS
+        elif user.rol == 'ENFERMERO':
+            return ['main/dashboard/nurse_home.html']
+        
+        # 3. CLIENTES (Por defecto)
+        else:
+            return ['main/dashboard/client_home.html']
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Aquí pasaremos estadísticas reales luego (Citas de hoy, Ingresos, etc.)
-        context['titulo_panel'] = "Resumen Operativo"
+        context['user_role'] = self.request.user.rol
         return context
+
+

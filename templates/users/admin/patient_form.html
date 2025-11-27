@@ -1,0 +1,144 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}{{ titulo }}{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 col-lg-offset-1">
+        
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="panel panel-bordered panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title"><i class="demo-pli-lock-user"></i> Datos de Cuenta (Login)</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="form-group">
+                                <label class="control-label text-bold">{{ form.email.label }} <span class="text-danger">*</span></label>
+                                {{ form.email }}
+                                <small class="text-muted">Será el usuario para ingresar al sistema.</small>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="form-group">
+                                <label class="control-label text-bold">{{ form.password_temp.label }}</label>
+                                {{ form.password_temp }}
+                                {% if form.password_temp.help_text %}
+                                    <small class="text-muted">{{ form.password_temp.help_text }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel panel-bordered">
+                <div class="panel-heading">
+                    <h3 class="panel-title"><i class="demo-pli-male"></i> Información Personal</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="form-group">
+                                <label class="control-label text-bold">{{ form.first_name.label }} <span class="text-danger">*</span></label>
+                                {{ form.first_name }}
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="form-group">
+                                <label class="control-label text-bold">{{ form.last_name.label }} <span class="text-danger">*</span></label>
+                                {{ form.last_name }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-4">
+                            <div class="form-group">
+                                <label class="control-label text-bold">{{ form.cedula.label }} <span class="text-danger">*</span></label>
+                                {{ form.cedula }}
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="form-group">
+                                <label class="control-label text-bold">{{ form.telefono.label }}</label>
+                                {{ form.telefono }}
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="form-group">
+                                <label class="control-label text-bold">{{ form.fecha_nacimiento.label }}</label>
+                                {{ form.fecha_nacimiento }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label text-bold">Foto de Perfil (Opcional)</label>
+                        {{ form.foto }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel panel-bordered">
+                <div class="panel-heading">
+                    <h3 class="panel-title"><i class="demo-pli-map-marker-2"></i> Ubicación y Ficha Médica</h3>
+                </div>
+                <div class="panel-body">
+                    
+                    <div class="row">
+                        <div class="col-sm-4">
+                            <div class="form-group">
+                                <label class="control-label text-bold">{{ form.ciudad.label }}</label>
+                                {{ form.ciudad }}
+                            </div>
+                        </div>
+                        <div class="col-sm-8">
+                            <div class="form-group">
+                                <label class="control-label text-bold">{{ form.google_maps_link.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="fa fa-map-marker"></i></span>
+                                    {{ form.google_maps_link }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label text-bold">{{ form.direccion.label }}</label>
+                        {{ form.direccion }}
+                    </div>
+
+                    <hr>
+
+                    <div class="form-group">
+                        <label class="control-label text-bold text-danger">{{ form.alergias.label }}</label>
+                        {{ form.alergias }}
+                    </div>
+
+                </div>
+                
+                <div class="panel-footer">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <button type="button" class="btn btn-dark" disabled title="Funcionalidad en construcción">
+                                <i class="fa fa-envelope"></i> Enviar datos de cuenta al paciente
+                            </button>
+                        </div>
+                        <div class="col-sm-6 text-right">
+                            <a href="{% url 'admin_patient_list' %}" class="btn btn-default">Cancelar</a>
+                            <button type="submit" class="btn btn-primary btn-lg">Guardar Ficha</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}

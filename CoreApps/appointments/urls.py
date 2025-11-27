@@ -6,7 +6,10 @@ from .views import (
     ReminderExperienceView, # <--- NUEVA VISTA
     ReminderPatientView,    # <--- NUEVO NOMBRE PARA EL PASO 2 (Antes 3)
     ReminderSuccessView,
-    CheckUserAPIView
+    CheckUserAPIView,
+    AdminReminderListView,
+    AdminReminderUpdateView,
+    AdminReminderCreateView
 )
 
 urlpatterns = [
@@ -25,4 +28,9 @@ urlpatterns = [
     
     # Éxito
     path('recordatorio/exito/', ReminderSuccessView.as_view(), name='public_reminder_success'),
+
+    # --- GESTIÓN ADMINISTRATIVA (FASE 1) ---
+    path('dashboard/recordatorios/', AdminReminderListView.as_view(), name='admin_reminder_list'),
+    path('dashboard/recordatorios/crear/', AdminReminderCreateView.as_view(), name='admin_reminder_create'),
+    path('dashboard/recordatorios/editar/<int:pk>/', AdminReminderUpdateView.as_view(), name='admin_reminder_update'),
 ]

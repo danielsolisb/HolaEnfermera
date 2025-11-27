@@ -1,0 +1,59 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% block title %}Medicamentos{% endblock %}
+{% block page_title %}Catálogo de Medicamentos{% endblock %}
+{% block breadcrumb %}<li class="active">Medicamentos</li>{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-heading">
+        <div class="panel-control">
+            <a href="{% url 'admin_medication_create' %}" class="btn btn-purple"><i class="demo-pli-add"></i> Nuevo Medicamento</a>
+        </div>
+        <h3 class="panel-title">Medicamentos y Frecuencias</h3>
+    </div>
+    <div class="panel-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 35%;">Medicamento</th>
+                        <th style="width: 35%;">Frecuencia de Aplicación</th>
+                        <th style="width: 15%;">Estado</th>
+                        <th class="text-center" style="width: 15%;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in medicamentos %}
+                    <tr>
+                        <td>
+                            <span class="text-bold">{{ m.nombre }}</span>
+                            {% if m.descripcion %}<br><small class="text-muted">{{ m.descripcion|truncatechars:50 }}</small>{% endif %}
+                        </td>
+                        <td>
+                            <i class="fa fa-clock-o"></i> Cada {{ m.frecuencia_valor }} {{ m.get_frecuencia_unidad_display }}
+                        </td>
+                        <td>
+                            {% if m.activo %}
+                                <span class="badge badge-success">Visible</span>
+                            {% else %}
+                                <span class="badge badge-default">Oculto</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'admin_medication_update' m.pk %}" class="btn btn-sm btn-default btn-hover-primary">
+                                <i class="demo-pli-pen-5"></i>
+                            </a>
+                            <a href="{% url 'admin_medication_delete' m.pk %}" class="btn btn-sm btn-default btn-hover-danger">
+                                <i class="demo-pli-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center">No hay medicamentos registrados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
