@@ -9,7 +9,9 @@ from .views import (
     CheckUserAPIView,
     AdminReminderListView,
     AdminReminderUpdateView,
-    AdminReminderCreateView
+    AdminReminderCreateView,
+    AdminReminderDeleteView,
+    AdminReminderStatusAPI
 )
 
 urlpatterns = [
@@ -18,6 +20,9 @@ urlpatterns = [
     path('api/book/', PublicBookingAPIView.as_view(), name='api_booking'),
     path('api/lead-reminder/', PublicReminderCreationAPIView.as_view(), name='api_lead_reminder'),
     path('api/check-user/', CheckUserAPIView.as_view(), name='api_check_user'),
+
+    path('dashboard/recordatorios/eliminar/<int:pk>/', AdminReminderDeleteView.as_view(), name='admin_reminder_delete'),
+    path('api/recordatorios/cambiar-estado/', AdminReminderStatusAPI.as_view(), name='api_reminder_status'),
 
     # --- WIZARD PÚBLICO (NUEVA ESTRUCTURA 2 PASOS) ---
     # Paso 1: Experiencia (Medicamento + Enfermero + Rating)

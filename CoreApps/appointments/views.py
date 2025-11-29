@@ -5,7 +5,7 @@ from django.views import View
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt # Necesario si la landing está fuera, o manejamos CSRF token en template
 from django.conf import settings
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, ListView, DeleteView
 from CoreApps.services.models import Medication
 
 from .services import AvailabilityService, BookingManager
@@ -270,11 +270,38 @@ class AdminReminderListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
     model = AppointmentReminder
     template_name = 'appointments/admin/reminder_list.html'
     context_object_name = 'recordatorios'
-    paginate_by = 20
-
+    # paginate_by = 20  <--- COMENTAR O BORRAR ESTA LÍNEA
+    
     def get_queryset(self):
-        # Ordenamos: Primero los pendientes más antiguos
         return AppointmentReminder.objects.all().order_by('estado', 'fecha_limite_sugerida')
+
+class AdminReminderDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
+    model = AppointmentReminder
+    template_name = 'services/admin/confirm_delete.html' # Reusamos la plantilla genérica
+    success_url = reverse_lazy('admin_reminder_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['titulo'] = 'Eliminar Recordatorio'
+        context['entidad'] = 'el recordatorio'
+        context['cancel_url'] = self.success_url
+        return context
+
+class AdminReminderStatusAPI(LoginRequiredMixin, AdminRequiredMixin, View):
+    def post(self, request):
+        try:
+            import json
+            data = json.loads(request.body)
+            reminder_id = data.get('id')
+            new_status = data.get('estado')
+            
+            reminder = AppointmentReminder.objects.get(id=reminder_id)
+            reminder.estado = new_status
+            reminder.save()
+            
+            return JsonResponse({'status': 'success', 'message': 'Estado actualizado correctamente'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 class AdminReminderUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
     model = AppointmentReminder

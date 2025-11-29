@@ -31,7 +31,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = True
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 CSRF_TRUSTED_ORIGINS = [
-    'https://705614587450.ngrok-free.app',
+    'https://aa9defe23ded.ngrok-free.app',
     'http://127.0.0.1:8000',  # Para que te siga funcionando en local
 ]
 #ALLOWED_HOSTS = []
