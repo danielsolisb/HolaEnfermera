@@ -1,7 +1,18 @@
 {% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
 {% block title %}Personal{% endblock %}
 {% block page_title %}Equipo de Enfermería{% endblock %}
 {% block breadcrumb %}<li class="active">Personal</li>{% endblock %}
+
+{% block extra_css %}
+    <link href="{% static 'plugins/datatables/media/css/dataTables.bootstrap.css' %}" rel="stylesheet">
+    <link href="{% static 'plugins/datatables/extensions/Responsive/css/responsive.dataTables.min.css' %}" rel="stylesheet">
+    <style>
+        .dataTables_filter { text-align: right; }
+        .dataTables_paginate { text-align: right; }
+    </style>
+{% endblock %}
 
 {% block content %}
 <div class="panel">
@@ -12,53 +23,80 @@
         <h3 class="panel-title">Staff Activo</h3>
     </div>
     <div class="panel-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th style="width: 25%;">Enfermero/a</th>
-                        
-                        <th style="width: 15%;">Registro Prof.</th>
-                        
-                        <th style="width: 25%;">Zona</th>
-                        <th style="width: 15%;">Transporte</th>
-                        <th style="width: 10%;">Estado</th>
-                        <th class="text-center" style="width: 10%;">Acción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for e in enfermeros %}
-                    <tr>
-                        <td>
-                            <img src="{% if e.foto %}{{ e.foto.url }}{% else %}/static/img/profile-photos/user.png{% endif %}" class="img-circle img-xs m-r-10">
-                            <span class="text-bold">{{ e.get_full_name }}</span>
-                        </td>
-                        <td>{{ e.perfil_enfermero.registro_profesional|default:"N/A" }}</td>
-                        <td>{{ e.perfil_enfermero.zona_cobertura }}</td>
-                        <td>
-                            {% if e.perfil_enfermero.es_motorizado %}
-                                <span class="badge badge-success"><i class="fa fa-motorcycle"></i> Sí</span>
-                            {% else %}
-                                <span class="badge badge-gray">No</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if e.is_active %}
-                                <span class="label label-success">Activo</span>
-                            {% else %}
-                                <span class="label label-danger">Inactivo</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            <a href="{% url 'admin_nurse_update' e.pk %}" class="btn btn-sm btn-default"><i class="demo-pli-pen-5"></i></a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="6">No hay personal registrado.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        
+        <table id="dt-enfermeros" class="table table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Enfermero/a</th>
+                    <th style="width: 15%;">Registro Prof.</th>
+                    <th style="width: 25%;">Zona</th>
+                    <th style="width: 15%;">Transporte</th>
+                    <th style="width: 10%;">Estado</th>
+                    <th class="text-center" style="width: 10%;" data-orderable="false">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in enfermeros %}
+                <tr>
+                    <td>
+                        <img src="{% if e.foto %}{{ e.foto.url }}{% else %}{% static 'img/profile-photos/user.png' %}{% endif %}" class="img-circle img-xs m-r-10">
+                        <span class="text-bold">{{ e.get_full_name }}</span>
+                    </td>
+                    <td>{{ e.perfil_enfermero.registro_profesional|default:"N/A" }}</td>
+                    <td>{{ e.perfil_enfermero.zona_cobertura }}</td>
+                    <td>
+                        {% if e.perfil_enfermero.es_motorizado %}
+                            <span class="badge badge-success"><i class="fa fa-motorcycle"></i> Sí</span>
+                        {% else %}
+                            <span class="badge badge-gray">No</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if e.is_active %}
+                            <span class="label label-success">Activo</span>
+                        {% else %}
+                            <span class="label label-danger">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <a href="{% url 'admin_nurse_update' e.pk %}" class="btn btn-sm btn-default btn-hover-primary" title="Editar">
+                            <i class="demo-pli-pen-5"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'plugins/datatables/media/js/jquery.dataTables.js' %}"></script>
+    <script src="{% static 'plugins/datatables/media/js/dataTables.bootstrap.js' %}"></script>
+    <script src="{% static 'plugins/datatables/extensions/Responsive/js/dataTables.responsive.min.js' %}"></script>
+
+    <script>
+        $(document).ready(function() {
+            $('#dt-enfermeros').DataTable({
+                "dom": "<'row'<'col-sm-6'l><'col-sm-6'f>>" +
+                       "<'row'<'col-sm-12'tr>>" +
+                       "<'row'<'col-sm-5'i><'col-sm-7'p>>",
+                "language": {
+                    "sProcessing": "Procesando...",
+                    "sLengthMenu": "Show _MENU_",
+                    "sZeroRecords": "No se encontraron resultados",
+                    "sEmptyTable": "No hay datos en esta sección",
+                    "sInfo": "_START_ al _END_ de _TOTAL_",
+                    "sInfoEmpty": "0 registros",
+                    "sInfoFiltered": "(filtro de _MAX_)",
+                    "sSearch": "Buscar:",
+                    "oPaginate": { "sNext": ">", "sPrevious": "<" }
+                },
+                "responsive": true,
+                "order": [[ 0, "asc" ]] 
+            });
+        });
+    </script>
 {% endblock %}

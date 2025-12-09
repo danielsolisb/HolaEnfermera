@@ -174,10 +174,14 @@
     <script>
         $(document).ready(function() {
             // Configuración común
+            // Se fuerza el DOM para mostrar filtro (f), longitud (l), tabla (t), info (i), paginación (p)
             const dtConfig = {
+                "dom": "<'row'<'col-sm-6'l><'col-sm-6'f>>" +
+                       "<'row'<'col-sm-12'tr>>" +
+                       "<'row'<'col-sm-5'i><'col-sm-7'p>>",
                 "language": {
                     "sProcessing": "Procesando...",
-                    "sLengthMenu": "Mostrar _MENU_",
+                    "sLengthMenu": "Show _MENU_",
                     "sZeroRecords": "No se encontraron resultados",
                     "sEmptyTable": "No hay datos en esta sección",
                     "sInfo": "_START_ al _END_ de _TOTAL_",
@@ -190,28 +194,34 @@
                 "columnDefs": [ { "orderable": false, "targets": 5 } ]
             };
 
-            // 1. Tabla Pendientes (Orden Ascendente por Fecha Límite - columna 3)
-            $('#dt-pendientes').DataTable({
+            // 1. Tablas
+            var tablePendientes = $('#dt-pendientes').DataTable({
                 ...dtConfig,
                 "order": [[ 3, "asc" ]] 
             });
 
-            // 2. Tabla Historial (Orden Descendente por Fecha Límite - columna 3)
-            $('#dt-historial').DataTable({
+            var tableHistorial = $('#dt-historial').DataTable({
                 ...dtConfig,
                 "order": [[ 3, "desc" ]]
             });
 
-            // 2. Lógica Modal Detalles
+            // CORRECCION RESPONSIVE EN PESTAÑAS
+            $('a[data-toggle="tab"]').on('shown.bs.tab', function(e){
+                $.fn.dataTable.tables({visible: true, api: true}).columns.adjust().responsive.recalc();
+            });
+
+            // 2. Lógica Modal Detalles (Corrección: usar .attr para evitar problemas de tipo)
             $(document).on('click', '.btn-view-details', function() {
                 const btn = $(this);
-                $('#det-paciente').text(btn.data('paciente'));
-                $('#det-cedula').text(btn.data('cedula'));
-                $('#det-telefono').text(btn.data('telefono'));
-                $('#det-producto').text(btn.data('producto'));
-                $('#det-fecha').text(btn.data('fecha'));
-                $('#det-notas').text(btn.data('notas'));
-                $('#det-origen').text(btn.data('origen'));
+                
+                // Usamos attr para asegurar que leemos el string exacto del HTML
+                $('#det-paciente').text(btn.attr('data-paciente'));
+                $('#det-cedula').text(btn.attr('data-cedula'));
+                $('#det-telefono').text(btn.attr('data-telefono'));
+                $('#det-producto').text(btn.attr('data-producto'));
+                $('#det-fecha').text(btn.attr('data-fecha'));
+                $('#det-notas').text(btn.attr('data-notas'));
+                $('#det-origen').text(btn.attr('data-origen'));
             });
 
             // 3. Lógica Modal Cambio de Estado
@@ -239,7 +249,7 @@
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    location.reload();
+                    location.reload(); 
                 } else {
                     alert("Error: " + data.message);
                 }
