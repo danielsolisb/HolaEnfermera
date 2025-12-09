@@ -89,6 +89,8 @@ class AppointmentReminder(models.Model):
         ('CONTACTADO', 'Cliente Contactado'),
         ('AGENDADO', 'Convertido en Cita'),
         ('CANCELADO', 'Descartado'),
+        ('EXPIRADO', 'Vencido sin Gestión'),
+        ('FALLO_ENVIO', 'Error al Enviar Recordatorio'),
     ]
     ORIGEN_CHOICES = [
         ('SISTEMA', 'Generado por Cierre de Cita'),
