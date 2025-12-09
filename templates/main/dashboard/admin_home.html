@@ -1,8 +1,231 @@
 {% extends 'layouts/dashboard_base.html' %}
-{% block title %}Panel Admin{% endblock %} {% block page_title %}Bienvenido Administrador{% endblock %} {% block content %}
-    <div class="panel">
-        <div class="panel-body">
-            <h3>Panel en Construcción para: {{ user.rol }}</h3>
+{% load static %}
+
+{% block title %}Panel Admin{% endblock %} 
+{% block page_title %}Centro de Comando{% endblock %} 
+
+{% block extra_css %}
+<style>
+    /* ESTILO MODERNO "CLÍNICA CLEAN" */
+    .dashboard-card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid #f0f0f0;
+        transition: transform 0.2s;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    .card-icon-bg {
+        width: 60px; height: 60px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 15px;
+    }
+    .bg-soft-blue { background: #e3f2fd; color: #1e88e5; }
+    .bg-soft-red { background: #ffebee; color: #e53935; }
+    .bg-soft-green { background: #e8f5e9; color: #43a047; }
+    .bg-soft-teal { background: #e0f2f1; color: #00897b; }
+    
+    .stats-number { font-size: 2.5em; font-weight: 300; margin-bottom: 5px; color: #333; }
+    .stats-label { color: #888; text-transform: uppercase; font-size: 0.85em; font-weight: 600; letter-spacing: 1px; }
+
+    /* TABLAS MODERNAS */
+    .table-clean th { border-top: none !important; border-bottom: 1px solid #eee; color: #999; font-weight: 600; font-size: 0.85em; text-transform: uppercase; }
+    .table-clean td { border-top: 1px solid #f9f9f9; padding: 12px 8px; vertical-align: middle; }
+    
+    /* AVATARES */
+    .img-circle-md { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #eee; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- FILA 1: KPIs SUPERIORES (Clean Design) -->
+<div class="row">
+    
+    <!-- KPI: Pacientes -->
+    <div class="col-md-3 col-sm-6">
+        <div class="dashboard-card text-center">
+            <div class="card-icon-bg bg-soft-blue center-block">
+                <i class="fa fa-users fa-2x"></i>
+            </div>
+            <div class="stats-number">{{ total_pacientes }}</div>
+            <div class="stats-label">Pacientes</div>
         </div>
     </div>
+
+    <!-- KPI: Pendientes -->
+    <div class="col-md-3 col-sm-6">
+        <div class="dashboard-card text-center" style="border-bottom: 3px solid #e53935;">
+            <div class="card-icon-bg bg-soft-red center-block">
+                <i class="fa fa-bell fa-2x"></i>
+            </div>
+            <div class="stats-number">{{ total_pendientes }}</div>
+            <div class="stats-label">Por Gestionar</div>
+        </div>
+    </div>
+
+    <!-- KPI: Leads Web -->
+    <div class="col-md-3 col-sm-6">
+        <div class="dashboard-card text-center">
+            <div class="card-icon-bg bg-soft-green center-block">
+                <i class="fa fa-globe fa-2x"></i>
+            </div>
+            <div class="stats-number">{{ total_leads_web }}</div>
+            <div class="stats-label">Leads Web</div>
+        </div>
+    </div>
+
+    <!-- KPI: Worker Status -->
+    <div class="col-md-3 col-sm-6">
+        <div class="dashboard-card text-center">
+            <div class="card-icon-bg bg-soft-teal center-block">
+                <i class="fa fa-whatsapp fa-2x"></i>
+            </div>
+            <div class="stats-number">{{ worker_enviados_24h }}</div>
+            <div class="stats-label">Auto-Enviados (24h)</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- FILA 2: GRÁFICOS Y TABLAS -->
+<div class="row">
+
+    <!-- COLUMNA IZQUIERDA: Chart + Accesos -->
+    <div class="col-md-8">
+        
+        <!-- GRÁFICO DE ESTADO (Embudo) -->
+        <div class="dashboard-card">
+            <h4 class="text-thin mar-no mar-btm text-muted">Estado de Recordatorios</h4>
+            <!-- Contenedor adaptativo de Chart.js -->
+            <div style="height: 250px;">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+
+        <!-- ACCESOS RÁPIDOS -->
+        <div class="row">
+            <div class="col-md-12">
+                <a href="{% url 'admin_reminder_create' %}" class="btn btn-primary btn-block" style="padding: 15px; border-radius: 6px;">
+                    <i class="fa fa-plus-circle"></i> Nuevo Recordatorio
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- COLUMNA DERECHA: Top Nurses + Logs -->
+    <div class="col-md-4">
+        
+        <!-- TOP ENFERMEROS -->
+        <div class="dashboard-card">
+            <h4 class="text-thin mar-no mar-btm text-muted">Top Enfermeros</h4>
+            <table class="table table-clean table-condensed">
+                <tbody>
+                    {% for nurse in top_nurses %}
+                    <tr>
+                        <td width="50" class="text-center">
+                            {% if nurse.foto_perfil %}
+                                <img src="{{ nurse.foto_perfil.url }}" class="img-circle-md">
+                            {% else %}
+                                <img src="{% static 'img/profile-photos/user.png' %}" class="img-circle-md">
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="text-bold text-dark">{{ nurse.first_name }} {{ nurse.last_name|slice:":1" }}.</span><br>
+                            <small class="text-muted">Enfermero</small>
+                        </td>
+                        <td class="text-right">
+                            <span class="badge badge-primary">{{ nurse.total_citas }}</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-muted">Sin datos.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- LOGS WORKER -->
+        <div class="dashboard-card">
+            <h4 class="text-thin mar-no mar-btm text-muted">Log Robot (En Vivo)</h4>
+            <table class="table table-clean">
+                <tbody>
+                    {% for log in ultimos_logs %}
+                    <tr>
+                        <td>
+                            <span class="text-semimuted text-xs">{{ log.fecha_intento|date:"H:i" }}</span><br>
+                            {% if log.enviado %}
+                                <i class="fa fa-check text-success"></i>
+                            {% else %}
+                                <i class="fa fa-times text-danger"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="text-dark">{{ log.recordatorio.paciente.first_name }}</span>
+                        </td>
+                        <td class="text-right">
+                           <small class="text-muted">Hace {{ log.fecha_intento|timesince }}</small>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td class="text-center text-muted">Sin actividad.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Datos inyectados desde Django
+        const statusData = {{ chart_status_data|safe }}; // [P, C, A, E]
+        
+        const ctx = document.getElementById('statusChart').getContext('2d');
+        const myChart = new Chart(ctx, {
+            type: 'bar', // Visualmente más claro que pie para comparar cantidades
+            data: {
+                labels: ['Pendiente', 'Contactado', 'Agendado', 'Expirado'],
+                datasets: [{
+                    label: 'Cantidad',
+                    data: statusData,
+                    backgroundColor: [
+                        '#e57373', // Rojo suave (Pendiente)
+                        '#64b5f6', // Azul suave (Contactado)
+                        '#81c784', // Verde suave (Agendado)
+                        '#e0e0e0'  // Gris (Expirado)
+                    ],
+                    borderRadius: 5,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f5f5f5' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    });
+</script>
 {% endblock %}

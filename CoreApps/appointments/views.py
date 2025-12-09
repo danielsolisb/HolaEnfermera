@@ -269,11 +269,26 @@ class AdminRequiredMixin(UserPassesTestMixin):
 class AdminReminderListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
     model = AppointmentReminder
     template_name = 'appointments/admin/reminder_list.html'
-    context_object_name = 'recordatorios'
-    # paginate_by = 20  <--- COMENTAR O BORRAR ESTA LÍNEA
     
     def get_queryset(self):
-        return AppointmentReminder.objects.all().order_by('estado', 'fecha_limite_sugerida')
+        # Mantenemos este queryset base por si acaso, pero el trabajo real se hace en get_context_data
+        return AppointmentReminder.objects.none() 
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # 1. Pendientes (Urgentes primero)
+        # Incluimos 'PENDIENTE' y 'FALLO_ENVIO' (para que el humano vea si falló el robot)
+        context['pendientes'] = AppointmentReminder.objects.filter(
+            estado__in=['PENDIENTE', 'FALLO_ENVIO']
+        ).select_related('paciente', 'medicamento_catalogo').order_by('fecha_limite_sugerida')
+        
+        # 2. Historial (Todo lo demás: Contactado, Agendado, Cancelado, Expirado)
+        context['historial'] = AppointmentReminder.objects.exclude(
+            estado__in=['PENDIENTE', 'FALLO_ENVIO']
+        ).select_related('paciente', 'medicamento_catalogo').order_by('-fecha_creacion')
+        
+        return context
 
 class AdminReminderDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
     model = AppointmentReminder

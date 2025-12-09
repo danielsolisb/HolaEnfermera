@@ -1,0 +1,105 @@
+<tr>
+    <td id="status-cell-{{ item.id }}" style="vertical-align: middle;">
+        {% if item.estado == 'PENDIENTE' %}
+            <span class="label label-warning label-lg">Pendiente</span>
+        {% elif item.estado == 'AGENDADO' %}
+            <span class="label label-success label-lg">Agendado</span>
+        {% elif item.estado == 'CONTACTADO' %}
+            <span class="label label-info label-lg">Contactado</span>
+        {% elif item.estado == 'CANCELADO' %}
+            <span class="label label-danger label-lg">Cancelado</span>
+        {% elif item.estado == 'EXPIRADO' %}
+            <span class="label label-dark label-lg">Expirado</span>
+        {% elif item.estado == 'FALLO_ENVIO' %}
+            <span class="label label-danger label-lg">Fallo Envío</span>
+        {% else %}
+            <span class="label label-default">{{ item.estado }}</span>
+        {% endif %}
+    </td>
+
+    <td style="vertical-align: middle;">
+        <span class="text-bold text-main">{{ item.paciente.get_full_name }}</span>
+        {% if item.paciente.cedula %}
+            <br><small class="text-muted">CI: {{ item.paciente.cedula }}</small>
+        {% endif %}
+    </td>
+
+    <td style="vertical-align: middle;">
+        {% if item.medicamento_catalogo %}
+            <i class="fa fa-medkit text-purple"></i> {{ item.medicamento_catalogo.nombre }}
+        {% else %}
+            <i class="fa fa-tag text-muted"></i> {{ item.medicamento_externo|default:"General" }}
+        {% endif %}
+    </td>
+
+    <td style="vertical-align: middle;">
+        {% if item.fecha_limite_sugerida %}
+            <span class="text-semibold">{{ item.fecha_limite_sugerida|date:"d M, Y" }}</span>
+            <br>
+            {# Lógica visual simple para fechas pasadas #}
+            {% now "Y-m-d" as todays_date %}
+            {% if item.fecha_limite_sugerida|date:"Y-m-d" < todays_date and item.estado == 'PENDIENTE' %}
+                <span class="text-danger text-xs text-bold"><i class="fa fa-exclamation-circle"></i> Vencido</span>
+            {% endif %}
+        {% else %}
+            <span class="text-muted">--</span>
+        {% endif %}
+    </td>
+
+    <td style="vertical-align: middle;">
+        {% if item.origen == 'WEB' %}
+            <span class="badge badge-mint">Web</span>
+        {% else %}
+            <span class="badge badge-dark">Sistema</span>
+        {% endif %}
+    </td>
+
+    <td class="text-center" style="vertical-align: middle;">
+        <div class="btn-group btn-action-group">
+            
+            {% if item.paciente.telefono %}
+                {# Lógica Template: Si empieza con 09, pon +593 y corta el 0. Si no, pon original #}
+                {% with telf=item.paciente.telefono %}
+                    <a href="https://wa.me/{% if telf|slice:':2' == '09' %}+593{{ telf|slice:'1:' }}{% else %}{{ telf }}{% endif %}?text=Hola {{ item.paciente.first_name }}, le saludamos de HolaEnfermera para recordarle su aplicación de {% if item.medicamento_catalogo %}{{ item.medicamento_catalogo.nombre }}{% else %}{{ item.medicamento_externo }}{% endif %}." 
+                       target="_blank" 
+                       class="btn btn-sm btn-success btn-hover-success" 
+                       title="Chat WhatsApp">
+                        <i class="fa fa-whatsapp fa-lg"></i>
+                    </a>
+                {% endwith %}
+            {% else %}
+                <button class="btn btn-sm btn-default" disabled title="Sin teléfono"><i class="fa fa-whatsapp"></i></button>
+            {% endif %}
+
+            <button class="btn btn-sm btn-default btn-hover-info btn-view-details"
+                    data-toggle="modal" data-target="#modal-reminder-details"
+                    data-paciente="{{ item.paciente.get_full_name }}"
+                    data-cedula="{{ item.paciente.cedula }}"
+                    data-telefono="{{ item.paciente.telefono }}"
+                    data-producto="{% if item.medicamento_catalogo %}{{ item.medicamento_catalogo.nombre }}{% else %}{{ item.medicamento_externo }}{% endif %}"
+                    data-fecha="{{ item.fecha_limite_sugerida|date:'d/m/Y' }}"
+                    data-notas="{{ item.notas|default:'Sin notas' }}"
+                    data-origen="{{ item.origen }}"
+                    title="Ver Detalles">
+                <i class="fas fa-eye"></i>
+            </button>
+
+            <button class="btn btn-sm btn-warning btn-hover-warning btn-change-status"
+                    data-toggle="modal" data-target="#modal-change-status"
+                    data-id="{{ item.id }}"
+                    data-current="{{ item.estado }}"
+                    title="Cambiar Estado Rápido">
+                <i class="fa fa-bolt"></i>
+            </button>
+
+            <a href="{% url 'admin_reminder_update' item.pk %}" class="btn btn-sm btn-default btn-hover-primary" title="Editar Completo">
+                <i class="demo-pli-pen-5"></i>
+            </a>
+            
+            <a href="{% url 'admin_reminder_delete' item.pk %}" class="btn btn-sm btn-default btn-hover-danger" title="Eliminar">
+                <i class="demo-pli-trash"></i>
+            </a>
+
+        </div>
+    </td>
+</tr>
