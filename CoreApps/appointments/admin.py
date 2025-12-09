@@ -50,7 +50,7 @@ class AppointmentReminderAdmin(admin.ModelAdmin):
     list_display = ('paciente', 'info_tratamiento', 'fecha_limite_sugerida', 'estado', 'origen')
     list_filter = ('estado', 'origen', 'fecha_limite_sugerida', 'medicamento_catalogo') # Filtro nuevo
     search_fields = ('paciente__email', 'paciente__cedula', 'medicamento_externo')
-    date_hierarchy = 'fecha_creacion'
+    # date_hierarchy = 'fecha_creacion'
     
     fieldsets = (
         ('Datos del Paciente', {

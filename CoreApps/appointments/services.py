@@ -13,6 +13,11 @@ from CoreApps.users.models import CustomerProfile
 from CoreApps.notifications.services import NotificationService
 from CoreApps.reports.models import ServiceFeedback
 from CoreApps.notifications.services import WASenderService
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.conf import settings
+from email.mime.image import MIMEImage
+import os
 
 
 from django.db import models
@@ -212,59 +217,57 @@ class BookingManager:
         reminder.save() 
         # Al hacer save(), el modelo ya calculó 'fecha_limite_sugerida' internamente
         
-        # 4. NOTIFICACIÓN WHATSAPP (CONTENIDO ENRIQUECIDO)
+        # 4. NOTIFICACIÓN POR CORREO (PACIENTE + ADMIN)
         try:
-            # A. Preparar Datos para el Mensaje
-            
-            # Nombre de la Enfermera
-            nombre_enfermero = "nuestro equipo"
-            if data.get('enfermero_id'):
-                try:
-                    enfermero_obj = User.objects.get(id=data['enfermero_id'])
-                    nombre_enfermero = f"la enfermera {enfermero_obj.get_full_name()}"
-                except:
-                    pass
-
-            # Fecha y Frecuencia
+            # A. Preparar Contexto
             fecha_proxima = reminder.fecha_limite_sugerida
-            texto_fecha = fecha_proxima.strftime('%d/%m/%Y') if fecha_proxima else "definir"
+            texto_fecha = fecha_proxima.strftime('%d/%m/%Y') if fecha_proxima else "Por definir"
             
             texto_frecuencia = ""
             if medicamento:
-                # Mapeo simple de unidades a texto legible
                 unidades = {'DIAS': 'días', 'MESES': 'meses', 'ANIOS': 'años'}
                 unidad_legible = unidades.get(medicamento.frecuencia_unidad, medicamento.frecuencia_unidad)
                 texto_frecuencia = f"(cada {medicamento.frecuencia_valor} {unidad_legible})"
 
-            # Ciudad
             ciudad_cliente = perfil.ciudad if perfil.ciudad else "tu ciudad"
 
-            # B. Construcción del Mensaje Empático
-            mensaje = f"👋 Hola {user.first_name}, soy tu asistente de Hola Enfermera.\n\n"
-            
-            mensaje += f"✅ *Recordatorio Creado con Éxito*\n"
-            mensaje += f"Hemos registrado tu aplicación de *{nombre_medicamento}*.\n"
-            mensaje += f"🗓️ *Próxima Dosis:* {texto_fecha} {texto_frecuencia}.\n\n"
-            
-            mensaje += f"🏥 *Tú eliges dónde*\n"
-            mensaje += f"Para esa fecha, recuerda que puedes elegir si deseas que te atendamos a domicilio o visitarnos en nuestro local en {ciudad_cliente}.\n\n"
+            contexto = {
+                'paciente_nombre': user.first_name,
+                'medicamento_nombre': nombre_medicamento,
+                'fecha_proxima': texto_fecha,
+                'frecuencia': texto_frecuencia,
+                'ciudad': ciudad_cliente,
+                'anio': datetime.now().year,
+            }
 
-            mensaje += f"⭐ *¡Gracias por tu valoración!*\n"
-            mensaje += f"Le haremos llegar tus comentarios a {nombre_enfermero}. Tu opinión nos impulsa a seguir mejorando nuestro servicio.\n\n"
+            # B. Renderizar Template
+            html_content = render_to_string('emails/reminder_created.html', contexto)
+            text_content = f"Hola {user.first_name}, se ha creado un recordatorio para {nombre_medicamento} para el {texto_fecha}."
 
-            if usuario_es_nuevo:
-                mensaje += "🆕 *Información de tu Cuenta*\n"
-                mensaje += "Para facilitar tus futuros agendamientos, hemos creado una cuenta para ti.\n"
-                mensaje += f"📧 Revisa tu correo ({user.email}) para más detalles.\n"
-                mensaje += f"🔑 Tu contraseña temporal es: {password_temp}\n"
-                mensaje += "Puedes cambiarla ingresando a nuestra web.\n\n"
+            # C. Obtener Destinatarios (Paciente + Admins)
+            destinatarios = [user.email]
+            admins = User.objects.filter(is_superuser=True, is_active=True).values_list('email', flat=True)
+            destinatarios.extend(list(admins))
+
+            # D. Crear Mensaje
+            subject = f"Nuevo Recordatorio Creado: {nombre_medicamento}"
+            msg = EmailMultiAlternatives(subject, text_content, settings.EMAIL_HOST_USER, destinatarios)
+            msg.attach_alternative(html_content, "text/html")
+
+            # E. Adjuntar Logo (Inline)
+            logo_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'logo-hola-enfermera.png')
+            if os.path.exists(logo_path):
+                with open(logo_path, 'rb') as f:
+                    logo_data = f.read()
+                    logo = MIMEImage(logo_data)
+                    logo.add_header('Content-ID', '<logo_hola_enfermera>')
+                    logo.add_header('Content-Disposition', 'inline', filename='logo-hola-enfermera.png')
+                    msg.attach(logo)
             
-            mensaje += "¡Que tengas un excelente día! 💙"
-
-            # Enviar
-            WASenderService.send_message(user.telefono, mensaje)
+            # F. Enviar
+            msg.send()
 
         except Exception as e:
-            print(f"⚠️ Advertencia: Error construyendo/enviando mensaje: {e}")
+            print(f"⚠️ Error enviando correo de recordatorio: {e}")
 
         return reminder

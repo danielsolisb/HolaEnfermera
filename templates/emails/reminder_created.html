@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Recordatorio Creado</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header img { max-width: 150px; }
+        .content { margin-bottom: 20px; }
+        .footer { font-size: 0.8em; color: #777; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }
+        .highlight { color: #007bff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <!-- Referencia al logo adjunto con Content-ID -->
+            <img src="cid:logo_hola_enfermera" alt="Hola Enfermera">
+        </div>
+        <div class="content">
+            <h2>¡Hola, {{ paciente_nombre }}!</h2>
+            <p>Se ha creado exitosamente un nuevo recordatorio en <strong>Hola Enfermera</strong>.</p>
+            
+            <h3>Detalles del Recordatorio:</h3>
+            <ul>
+                <li><strong>Medicamento:</strong> {{ medicamento_nombre }}</li>
+                <li><strong>Próxima aplicación:</strong> <span class="highlight">{{ fecha_proxima }}</span></li>
+                {% if frecuencia %}
+                <li><strong>Frecuencia:</strong> {{ frecuencia }}</li>
+                {% endif %}
+            </ul>
+
+            <p>Recuerda que para esa fecha puedes elegir entre:</p>
+            <ul>
+                <li>Atención a domicilio.</li>
+                <li>Visitarnos en nuestro local en <strong>{{ ciudad }}</strong>.</li>
+            </ul>
+
+            <p>Gracias por confiar en nosotros.</p>
+        </div>
+        <div class="footer">
+            <p>Este es un mensaje automático, por favor no responder a este correo.</p>
+            <p>&copy; {{ anio }} Hola Enfermera. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>

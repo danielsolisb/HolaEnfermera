@@ -83,7 +83,7 @@ class Appointment(models.Model):
 
 
 class AppointmentReminder(models.Model):
-    # ... (ESTADOS, ORIGEN_CHOICES, FKs se mantienen igual) ...
+    # (ESTADOS, ORIGEN_CHOICES, FKs se mantienen igual) ...
     ESTADOS = [
         ('PENDIENTE', 'Pendiente de Gestión'),
         ('CONTACTADO', 'Cliente Contactado'),

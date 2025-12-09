@@ -207,6 +207,43 @@ class NurseCreateView(LoginRequiredMixin, AdminRequiredMixin, SuccessMessageMixi
         context['titulo'] = 'Nuevo Enfermero'
         return context
 
+    def form_valid(self, form):
+        response = super().form_valid(form) # Primero guarda el usuario
+        
+        # Verificamos si se presionó el botón de "Enviar credenciales"
+        if self.request.POST.get('action') == 'send_credentials':
+            try:
+                # Recuperar datos
+                # La contraseña puede venir en password_temp o ser la cédula
+                password = form.cleaned_data.get('password_temp') or form.cleaned_data.get('cedula')
+                # El usuario es el correo
+                usuario_login = self.object.email
+                telefono = self.object.telefono
+                nombre = f"{self.object.first_name} {self.object.last_name}"
+                
+                # Construir mensaje
+                mensaje = f"👋 Hola {nombre}, bienvenido al equipo de Hola Enfermera.\n\n"
+                mensaje += f"✅ *Tus credenciales de acceso son:*\n"
+                mensaje += f"📧 *Usuario:* {usuario_login}\n"
+                mensaje += f"🔑 *Contraseña:* {password}\n\n"
+                
+                login_url = self.request.build_absolute_uri('/') # Home o Login
+                mensaje += f"🔗 Ingresa aquí: {login_url}\n\n"
+                mensaje += "Por favor, cambia tu contraseña al ingresar."
+
+                # Enviar WhatsApp
+                from CoreApps.notifications.services import WASenderService
+                WASenderService.send_message(telefono, mensaje)
+                
+                # Mensaje de éxito adicional
+                messages.success(self.request, "✅ Credenciales enviadas por WhatsApp correctamente.")
+                
+            except Exception as e:
+                print(f"Error enviando credenciales: {e}")
+                messages.warning(self.request, f"Usuario creado, pero hubo un error enviando el WhatsApp: {e}")
+        
+        return response
+
 class NurseUpdateView(LoginRequiredMixin, AdminRequiredMixin, SuccessMessageMixin, UpdateView):
     model = User
     form_class = NurseForm
