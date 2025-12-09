@@ -33,6 +33,14 @@
     </td>
 
     <td style="vertical-align: middle;">
+        {% if item.cita_origen %}
+            {{ item.cita_origen.fecha|date:"d M, Y" }}
+        {% else %}
+            <span class="text-muted">--</span>
+        {% endif %}
+    </td>
+
+    <td style="vertical-align: middle;">
         {% if item.fecha_limite_sugerida %}
             <span class="text-semibold">{{ item.fecha_limite_sugerida|date:"d M, Y" }}</span>
             <br>

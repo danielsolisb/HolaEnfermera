@@ -266,6 +266,83 @@ class AdminRequiredMixin(UserPassesTestMixin):
 
 # --- VISTAS ---
 
+import openpyxl
+from django.http import HttpResponse
+
+class AdminReminderExportView(LoginRequiredMixin, AdminRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        # 1. Crear Workbook y Sheet
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Recordatorios"
+
+        # 2. Encabezados
+        headers = [
+            "ID", "Estado", "Paciente", "Cédula", "Teléfono", 
+            "Producto / Servicio", "Fecha Aplicación", "Próxima Aplicación", 
+            "Origen", "Notas"
+        ]
+        ws.append(headers)
+
+        # 3. Obtener Datos (Todos)
+        reminders = AppointmentReminder.objects.all().select_related(
+            'paciente', 'medicamento_catalogo', 'cita_origen'
+        ).order_by('-fecha_creacion')
+
+        # 4. Llenar filas
+        for item in reminders:
+            # Datos Paciente
+            paciente_nombre = item.paciente.get_full_name()
+            cedula = item.paciente.cedula if item.paciente.cedula else ""
+            telefono = item.paciente.telefono if item.paciente.telefono else ""
+            
+            # Producto
+            producto = ""
+            if item.medicamento_catalogo:
+                producto = item.medicamento_catalogo.nombre
+            else:
+                producto = item.medicamento_externo or "General"
+
+            # Fechas
+            fecha_app = item.cita_origen.fecha if item.cita_origen else ""
+            fecha_prox = item.fecha_limite_sugerida if item.fecha_limite_sugerida else ""
+
+            row = [
+                item.id,
+                item.estado,
+                paciente_nombre,
+                cedula,
+                telefono,
+                producto,
+                fecha_app,
+                fecha_prox,
+                item.origen,
+                item.notas
+            ]
+            ws.append(row)
+
+        # 5. Ajustar ancho de columnas (Opcional, básico)
+        for col in ws.columns:
+            max_length = 0
+            column = col[0].column_letter # A, B, C...
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            ws.column_dimensions[column].width = adjusted_width
+
+        # 6. Respuesta HTTP
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="recordatorios_leads.xlsx"'
+        
+        wb.save(response)
+        return response
+
 class AdminReminderListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
     model = AppointmentReminder
     template_name = 'appointments/admin/reminder_list.html'
@@ -281,12 +358,12 @@ class AdminReminderListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
         # Incluimos 'PENDIENTE' y 'FALLO_ENVIO' (para que el humano vea si falló el robot)
         context['pendientes'] = AppointmentReminder.objects.filter(
             estado__in=['PENDIENTE', 'FALLO_ENVIO']
-        ).select_related('paciente', 'medicamento_catalogo').order_by('fecha_limite_sugerida')
+        ).select_related('paciente', 'medicamento_catalogo', 'cita_origen').order_by('fecha_limite_sugerida')
         
         # 2. Historial (Todo lo demás: Contactado, Agendado, Cancelado, Expirado)
         context['historial'] = AppointmentReminder.objects.exclude(
             estado__in=['PENDIENTE', 'FALLO_ENVIO']
-        ).select_related('paciente', 'medicamento_catalogo').order_by('-fecha_creacion')
+        ).select_related('paciente', 'medicamento_catalogo', 'cita_origen').order_by('-fecha_creacion')
         
         return context
 

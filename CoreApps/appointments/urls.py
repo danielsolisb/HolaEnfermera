@@ -11,7 +11,8 @@ from .views import (
     AdminReminderUpdateView,
     AdminReminderCreateView,
     AdminReminderDeleteView,
-    AdminReminderStatusAPI
+    AdminReminderStatusAPI,
+    AdminReminderExportView
 )
 
 urlpatterns = [
@@ -36,6 +37,7 @@ urlpatterns = [
 
     # --- GESTIÓN ADMINISTRATIVA (FASE 1) ---
     path('dashboard/recordatorios/', AdminReminderListView.as_view(), name='admin_reminder_list'),
+    path('dashboard/recordatorios/exportar/', AdminReminderExportView.as_view(), name='admin_reminder_export'),
     path('dashboard/recordatorios/crear/', AdminReminderCreateView.as_view(), name='admin_reminder_create'),
     path('dashboard/recordatorios/editar/<int:pk>/', AdminReminderUpdateView.as_view(), name='admin_reminder_update'),
 ]
