@@ -206,12 +206,24 @@ class BookingManager:
             if medicamento:
                 nombre_medicamento = medicamento.nombre
 
+        # Parsear fecha de aplicación si existe (viene como string del JSON)
+        fecha_app_obj = None
+        fecha_app_str = data.get('fecha_aplicacion')
+        if fecha_app_str:
+            try:
+                # El input HTML date envía en formato YYYY-MM-DD
+                fecha_app_obj = datetime.strptime(fecha_app_str, '%Y-%m-%d').date()
+            except ValueError:
+                # Fallback por seguridad
+                fecha_app_obj = datetime.now().date()
+
         reminder = AppointmentReminder(
             paciente=user,
             medicamento_catalogo=medicamento,
             medicamento_externo=nombre_medicamento,
             origen='WEB',
             estado='PENDIENTE',
+            fecha_ultima_aplicacion=fecha_app_obj, # Ahora pasamos un OBJETO fecha
             notas=f"Rating: {data.get('rating')}/5. Enfermero ID: {data.get('enfermero_id')}"
         )
         reminder.save() 

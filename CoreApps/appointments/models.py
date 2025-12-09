@@ -120,6 +120,7 @@ class AppointmentReminder(models.Model):
     cita_origen = models.ForeignKey('Appointment', on_delete=models.SET_NULL, null=True, blank=True, related_name='recordatorios_generados')
     enfermero_sugerido = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='recordatorios_asignados')
 
+    fecha_ultima_aplicacion = models.DateField(null=True, blank=True, help_text="Fecha base para el cálculo")
     fecha_limite_sugerida = models.DateField(null=True, blank=True)
     
     origen = models.CharField(max_length=20, choices=ORIGEN_CHOICES, default='SISTEMA')
@@ -151,13 +152,14 @@ class AppointmentReminder(models.Model):
             valor = self.medicamento_catalogo.frecuencia_valor
             unidad = self.medicamento_catalogo.frecuencia_unidad
             
-            ahora = timezone.now().date()
+            # Base para el cálculo: Preferimos la fecha que indicó el usuario (si existe), si no, HOY.
+            base_date = self.fecha_ultima_aplicacion if self.fecha_ultima_aplicacion else timezone.now().date()
             
             if unidad == 'DIAS':
-                self.fecha_limite_sugerida = ahora + timedelta(days=valor)
+                self.fecha_limite_sugerida = base_date + timedelta(days=valor)
             elif unidad == 'MESES':
-                self.fecha_limite_sugerida = self._add_months(ahora, valor)
+                self.fecha_limite_sugerida = self._add_months(base_date, valor)
             elif unidad == 'ANIOS':
-                self.fecha_limite_sugerida = self._add_months(ahora, valor * 12)
+                self.fecha_limite_sugerida = self._add_months(base_date, valor * 12)
             
         super().save(*args, **kwargs)

@@ -304,7 +304,12 @@ class AdminReminderExportView(LoginRequiredMixin, AdminRequiredMixin, View):
                 producto = item.medicamento_externo or "General"
 
             # Fechas
-            fecha_app = item.cita_origen.fecha if item.cita_origen else ""
+            fecha_app = ""
+            if item.cita_origen:
+                fecha_app = item.cita_origen.fecha
+            elif item.fecha_ultima_aplicacion:
+                fecha_app = item.fecha_ultima_aplicacion
+
             fecha_prox = item.fecha_limite_sugerida if item.fecha_limite_sugerida else ""
 
             row = [

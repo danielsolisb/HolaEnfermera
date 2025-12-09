@@ -35,6 +35,8 @@
     <td style="vertical-align: middle;">
         {% if item.cita_origen %}
             {{ item.cita_origen.fecha|date:"d M, Y" }}
+        {% elif item.fecha_ultima_aplicacion %}
+            {{ item.fecha_ultima_aplicacion|date:"d M, Y" }}
         {% else %}
             <span class="text-muted">--</span>
         {% endif %}

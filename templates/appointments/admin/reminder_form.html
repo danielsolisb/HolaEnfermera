@@ -130,7 +130,7 @@
                     <div class="form-group bg-gray-light pad-all" style="border-radius: 5px;">
                         <label class="col-sm-3 control-label text-bold text-main">Fecha de Aplicación</label>
                         <div class="col-sm-5">
-                            {{ form.fecha_aplicacion }}
+                            {{ form.fecha_ultima_aplicacion }}
                             <span class="help-block">¿Cuándo se puso la dosis actual?</span>
                         </div>
                         
@@ -247,7 +247,7 @@
         const medData = {{ medicamentos_json|safe }};
         
         const selectMed = document.getElementById('id_medicamento_catalogo');
-        const inputAppDate = document.getElementById('id_fecha_aplicacion');
+        const inputAppDate = document.getElementById('id_fecha_ultima_aplicacion');
         const inputTargetDate = document.getElementById('id_fecha_limite_sugerida');
         const switchAuto = document.getElementById('switch-auto-calc');
         const infoSpan = document.getElementById('calc-info');
