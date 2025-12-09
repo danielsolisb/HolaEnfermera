@@ -278,7 +278,7 @@ class AdminReminderExportView(LoginRequiredMixin, AdminRequiredMixin, View):
 
         # 2. Encabezados
         headers = [
-            "ID", "Estado", "Paciente", "Cédula", "Teléfono", 
+            "ID", "Estado", "Paciente", "Email", "Cédula", "Teléfono", 
             "Producto / Servicio", "Fecha Aplicación", "Próxima Aplicación", 
             "Origen", "Notas"
         ]
@@ -316,6 +316,7 @@ class AdminReminderExportView(LoginRequiredMixin, AdminRequiredMixin, View):
                 item.id,
                 item.estado,
                 paciente_nombre,
+                item.paciente.email,
                 cedula,
                 telefono,
                 producto,
