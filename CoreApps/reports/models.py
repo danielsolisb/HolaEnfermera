@@ -3,6 +3,7 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from CoreApps.appointments.models import Appointment, AppointmentReminder
 
+# Servicio de reporte modelo
 class ServiceReport(models.Model):
     """
     Reporte final que llena el enfermero al terminar.

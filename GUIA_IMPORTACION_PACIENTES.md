@@ -310,4 +310,9 @@ class Command(BaseCommand):
 
 
 python manage.py import_patients "ARCHIVO CLIENTES RECURRENTES.xlsx"
+
+
 ```
+
+ojo, el servicio en el servidor se llama:
+#servicio holaenfermera-whatsapp
