@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import LeadViewSet
 
 router = DefaultRouter()
-router.register(r'leads', LeadViewSet, basename='api_leads')
+router.register(r'', LeadViewSet, basename='api_leads')
 
 urlpatterns = [
     path('', include(router.urls)),
