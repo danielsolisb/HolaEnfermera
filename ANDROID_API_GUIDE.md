@@ -97,7 +97,20 @@ _Botón Principal: "Medicamentos"_
 
 ## 5. Funcionalidad: Gestión de Usuarios
 
-_API para registrar nuevos actores desde la App._
+_API para registrar y listar actores._
+
+### **Listar Pacientes**
+
+- **Método:** `GET`
+- **Endpoint:** `/api/users/patients/`
+- **Búsqueda:** `?search=Nombre o Cedula`
+- **Respuesta:** Lista de objetos (id, fullname, cedula, email).
+
+### **Listar Enfermeros**
+
+- **Método:** `GET`
+- **Endpoint:** `/api/users/nurses/`
+- **Búsqueda:** `?search=Nombre o Cedula`
 
 ### **Crear Paciente**
 
