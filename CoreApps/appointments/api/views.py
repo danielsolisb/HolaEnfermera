@@ -20,6 +20,7 @@ class LeadViewSet(viewsets.ModelViewSet):
     search_fields = ['paciente__first_name', 'paciente__last_name', 'paciente__cedula', 'medicamento_catalogo__nombre']
     ordering_fields = ['fecha_limite_sugerida', 'fecha_creacion']
     ordering = ['fecha_limite_sugerida'] # Por defecto: los más urgentes primero
+    pagination_class = None # Devolvemos todo sin paginar (Pedido usuario)
 
     def get_queryset(self):
         # Optimizamos queries con select_related
