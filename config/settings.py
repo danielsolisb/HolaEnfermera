@@ -52,6 +52,11 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'django_select2',
 
+    # Third Party Apps
+    'rest_framework',
+    'drf_spectacular',
+    'corsheaders',
+
     # Mis Apps (dentro de CoreApps)
     'CoreApps.users',
     'CoreApps.services',
@@ -67,6 +72,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware', # <--- CORS (Debe ir antes de CommonMiddleware)
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -199,3 +205,31 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') # <--- Cambio
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'  # Ahora sí, al loguearse van al dashboard
 LOGOUT_REDIRECT_URL = 'login'
+
+
+# --- DRF CONFIGURATION ---
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication', # Descomentar en Fase 2
+    ],
+}
+
+# --- SWAGGER / SPECTACULAR CONFIGURATION ---
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'HolaEnfermera API',
+    'DESCRIPTION': 'API para gestión administrativa móvil.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # 'COMPONENT_SPLIT_REQUEST': True
+}
+
+# --- CORS CONFIGURATION ---
+CORS_ALLOW_ALL_ORIGINS = True # Para desarrollo. En producción, especificar dominios.

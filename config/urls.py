@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 
 urlpatterns = [
@@ -34,6 +35,17 @@ urlpatterns = [
     # localhost:8000/citas/api/availability/
     path('citas/', include('CoreApps.appointments.urls')),
     path('', include('CoreApps.services.urls')),
+
+    # --- API DOCUMENTATION URLS ---
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    # Optional UI:
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
+    # --- API V1 ROUTES ---
+    path('api/', include('CoreApps.users.api.urls')),
+    path('api/leads/', include('CoreApps.appointments.api.urls')), # Le damos prefix explícito aquí o en su urls.py, preferible mantener consistencia
+    path('api/config/', include('CoreApps.services.api.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
