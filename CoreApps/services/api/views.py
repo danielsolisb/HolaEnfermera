@@ -22,9 +22,9 @@ class MedicationViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['nombre', 'descripcion']
 
-class ServiceCategoryViewSet(viewsets.ReadOnlyModelViewSet):
+class ServiceCategoryViewSet(viewsets.ModelViewSet):
     """
-    Solo lectura para categorías (se usan en dropdowns).
+    CRUD completo para categorías (permitir crear/editar).
     """
     queryset = ServiceCategory.objects.all()
     serializer_class = ServiceCategorySerializer

@@ -188,3 +188,47 @@ El proceso correcto para evitar errores debe ser:
     - Obtener el `id` de la respuesta.
 3.  **✅ Con el Usuario listo (ID):**
     - Llamar a **Crear Recordatorio** (`/api/leads/create/`) enviando ese `paciente_id`.
+
+---
+
+## 7. Funcionalidad: Gestión de Catálogos
+
+_(Solo Admins)_
+
+### **Crear Categoría**
+
+- **Método:** `POST`
+- **Endpoint:** `/api/config/categories/`
+- **Body:**
+  ```json
+  {
+    "nombre": "Enfermería General"
+  }
+  ```
+
+### **Crear Servicio**
+
+- **Método:** `POST`
+- **Endpoint:** `/api/config/services/`
+- **Body:**
+  ```json
+  {
+    "categoria": 1,
+    "nombre": "Inyección",
+    "precio_base": "15.00",
+    "duracion_horas": 1
+  }
+  ```
+
+### **Crear Medicamento**
+
+- **Método:** `POST`
+- **Endpoint:** `/api/config/medications/`
+- **Body:**
+  ```json
+  {
+    "nombre": "Aclasta",
+    "frecuencia_valor": 1,
+    "frecuencia_unidad": "ANIOS" // DIAS, MESES, ANIOS
+  }
+  ```
