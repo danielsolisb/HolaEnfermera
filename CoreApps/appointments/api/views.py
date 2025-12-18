@@ -1,7 +1,7 @@
-from rest_framework import viewsets, filters, permissions
+from rest_framework import viewsets, filters, permissions, generics
 from django_filters.rest_framework import DjangoFilterBackend
 from CoreApps.appointments.models import AppointmentReminder
-from .serializers import LeadSerializer
+from .serializers import LeadSerializer, LeadCreateSerializer
 
 class LeadViewSet(viewsets.ModelViewSet):
     """
@@ -27,3 +27,16 @@ class LeadViewSet(viewsets.ModelViewSet):
         return AppointmentReminder.objects.all().select_related(
             'paciente', 'medicamento_catalogo', 'servicio_sugerido'
         )
+
+class LeadCreateAPIView(generics.CreateAPIView):
+    """
+    API Específica para crear Recordatorios Manuales desde la App.
+    Forza origen='WEB' y asocia paciente por ID.
+    PROCESO:
+    1. Buscar usuario (endpoint users).
+    2. Si no existe, crear usuario (endpoint users).
+    3. Con ID de usuario, llamar a este endpoint.
+    """
+    queryset = AppointmentReminder.objects.all()
+    serializer_class = LeadCreateSerializer
+    permission_classes = [permissions.IsAuthenticated]

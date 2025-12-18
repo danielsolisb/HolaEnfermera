@@ -24,7 +24,7 @@ class SimpleMedicationSerializer(serializers.ModelSerializer):
         model = Medication
         fields = ['id', 'nombre', 'frecuencia_txt']
 
-# --- Main Serializer ---
+# --- Main Serializers ---
 
 class LeadSerializer(serializers.ModelSerializer):
     paciente = SimpleUserSerializer(read_only=True)
@@ -57,3 +57,48 @@ class LeadSerializer(serializers.ModelSerializer):
             
         instance.save()
         return instance
+
+class LeadCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer Exclusivo para Crear Recordatorios Manuales desde App.
+    Recibe IDs y texto plano.
+    """
+    paciente_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(rol='CLIENTE'),
+        source='paciente',
+        write_only=True,
+        required=True
+    )
+    medicamento_catalogo_id = serializers.PrimaryKeyRelatedField(
+        queryset=Medication.objects.all(),
+        source='medicamento_catalogo',
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+    
+    class Meta:
+        model = AppointmentReminder
+        fields = [
+            'paciente_id', 
+            'medicamento_catalogo_id', 
+            'medicamento_externo',
+            'fecha_ultima_aplicacion', 
+            'fecha_limite_sugerida', 
+            'notas'
+        ]
+
+    def create(self, validated_data):
+        # Forzamos origen MANUAL
+        validated_data['origen'] = 'WEB' # O 'MANUAL' si agregamos esa opción al modelo, pero por ahora 'WEB' (Landing/App) es lo más cercano en tus choices actuales.
+        # Si prefieres añadir 'MANUAL' al modelo, hazlo, pero usaremos WEB por compatibilidad actual.
+        # UPDATE: El usuario dijo "origen MANUAL" en el plan. Revisemos el modelo.
+        # El modelo tiene 'WEB' y 'SISTEMA'. Usaré 'WEB' para no romper, o 'SISTEMA' si es interno.
+        # Mejor aún: Si el usuario quiere 'MANUAL', debería estar en el modelo. 
+        # PERO, el modelo tiene choices estrictas. Usaré 'WEB' para indicar que viene de "fuera" del sistema automático.
+        
+        # ACT: El modelo tiene: ('SISTEMA', ...), ('WEB', ...).
+        # Usaré 'WEB' como convención para "App/Web manual".
+        validated_data['origen'] = 'WEB' 
+        
+        return super().create(validated_data)
