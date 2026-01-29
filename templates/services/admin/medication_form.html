@@ -41,8 +41,13 @@
 
                     <div class="form-group">
                         <div class="col-sm-offset-3 col-sm-9">
-                            <div class="checkbox">
-                                <label>{{ form.activo }} <strong>Visible en el Buscador Público</strong></label>
+                            <div class="checkbox pad-btm text-left">
+                                {{ form.es_recurrente }}
+                                <label for="id_es_recurrente" class="text-bold text-dark">Activar recordatorio cíclico (de por vida)</label>
+                            </div>
+                            <div class="checkbox pad-btm text-left">
+                                {{ form.activo }}
+                                <label for="id_activo" class="text-bold text-dark">Visible en el Buscador Público</label>
                             </div>
                         </div>
                     </div>

@@ -27,8 +27,9 @@
         <table id="dt-medicamentos" class="table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
                 <tr>
-                    <th style="width: 35%;">Medicamento</th>
-                    <th style="width: 35%;">Frecuencia de Aplicación</th>
+                    <th style="width: 30%;">Medicamento</th>
+                    <th style="width: 25%;">Frecuencia de Aplicación</th>
+                    <th style="width: 15%;">Recurrente</th>
                     <th style="width: 15%;">Estado</th>
                     <th class="text-center" style="width: 15%;" data-orderable="false">Acción</th>
                 </tr>
@@ -42,6 +43,13 @@
                     </td>
                     <td>
                         <i class="fa fa-clock-o"></i> Cada {{ m.frecuencia_valor }} {{ m.get_frecuencia_unidad_display }}
+                    </td>
+                    <td>
+                        {% if m.es_recurrente %}
+                            <span class="label label-info">Ciclo Activo</span>
+                        {% else %}
+                            <span class="label label-default">Manual</span>
+                        {% endif %}
                     </td>
                     <td>
                         {% if m.activo %}

@@ -4,3 +4,7 @@ from django.apps import AppConfig
 class AppointmentsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'CoreApps.appointments'
+
+    def ready(self):
+        import CoreApps.appointments.signals
+

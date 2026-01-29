@@ -283,3 +283,43 @@ class BookingManager:
             print(f"⚠️ Error enviando correo de recordatorio: {e}")
 
         return reminder
+
+    @staticmethod
+    def create_next_cycle_reminder(reminder_actual):
+        """
+        Crea automáticamente el siguiente recordatorio para medicamentos recurrentes.
+        Toma como base la fecha_limite_sugerida del recordatorio actual para mantener la precisión.
+        """
+        # 1. Validaciones previas
+        if not reminder_actual.medicamento_catalogo or not reminder_actual.medicamento_catalogo.es_recurrente:
+            return None
+
+        # 2. Evitar duplicados: No crear si ya existe uno PENDIENTE para el mismo paciente y medicamento
+        exists = AppointmentReminder.objects.filter(
+            paciente=reminder_actual.paciente,
+            medicamento_catalogo=reminder_actual.medicamento_catalogo,
+            estado='PENDIENTE'
+        ).exists()
+
+        if exists:
+            return None
+
+        # 3. Crear el nuevo ciclo
+        # Importante: Como 'base' usamos la fecha proyectada del anterior (ej: 27 de enero)
+        # aunque el admin lo esté cerrando el 25 de enero.
+        proxima_fecha_base = reminder_actual.fecha_limite_sugerida
+
+        nuevo_recordatorio = AppointmentReminder(
+            paciente=reminder_actual.paciente,
+            medicamento_catalogo=reminder_actual.medicamento_catalogo,
+            medicamento_externo=reminder_actual.medicamento_externo,
+            origen='SISTEMA',
+            estado='PENDIENTE',
+            fecha_ultima_aplicacion=proxima_fecha_base, # Base para el nuevo cálculo
+            notas=f"Ciclo automático generado desde recordatorio #{reminder_actual.id}."
+        )
+        
+        # El save() del modelo se encargará de sumar la frecuencia (1 año, 6 meses, etc.)
+        nuevo_recordatorio.save()
+        
+        return nuevo_recordatorio

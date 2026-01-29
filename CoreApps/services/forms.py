@@ -48,16 +48,18 @@ class MedicationForm(forms.ModelForm):
     # ... (mismo código anterior) ...
     class Meta:
         model = Medication
-        fields = ['nombre', 'descripcion', 'frecuencia_valor', 'frecuencia_unidad', 'activo']
+        fields = ['nombre', 'descripcion', 'frecuencia_valor', 'frecuencia_unidad', 'es_recurrente', 'activo']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Neurobión 3ml'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'frecuencia_valor': forms.NumberInput(attrs={'class': 'form-control'}),
             'frecuencia_unidad': forms.Select(attrs={'class': 'form-control selectpicker'}),
+            'es_recurrente': forms.CheckboxInput(attrs={'class': 'magic-checkbox'}),
             'activo': forms.CheckboxInput(attrs={'class': 'magic-checkbox'}),
         }
         labels = {
             'frecuencia_valor': 'Cada cuánto tiempo se aplica',
             'frecuencia_unidad': 'Unidad de Tiempo',
+            'es_recurrente': 'Activar recordatorio cíclico (de por vida)',
             'activo': 'Visible en el Buscador Público'
         }

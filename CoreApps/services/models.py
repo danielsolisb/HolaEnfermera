@@ -95,6 +95,12 @@ class Medication(models.Model):
         default='MESES'
     )
     
+    es_recurrente = models.BooleanField(
+        _('Es Recurrente / Vitalicio'),
+        default=False,
+        help_text=_('Si se marca, el sistema generará automáticamente el siguiente recordatorio al completar el actual.')
+    )
+    
     activo = models.BooleanField(default=True)
 
     class Meta:

@@ -34,9 +34,9 @@ class ServiceAdmin(admin.ModelAdmin):
 
 @admin.register(Medication)
 class MedicationAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'frecuencia_legible', 'activo')
+    list_display = ('nombre', 'frecuencia_legible', 'es_recurrente', 'activo')
     search_fields = ('nombre',)
-    list_filter = ('frecuencia_unidad', 'activo')
+    list_filter = ('es_recurrente', 'frecuencia_unidad', 'activo')
     
     def frecuencia_legible(self, obj):
         return f"Cada {obj.frecuencia_valor} {obj.get_frecuencia_unidad_display()}"
