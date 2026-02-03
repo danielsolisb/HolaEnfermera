@@ -117,6 +117,13 @@ class AppointmentReminder(models.Model):
     
     medicamento_externo = models.CharField(max_length=200, blank=True, null=True)
     
+    # Seguimiento de Esquemas (Nuevo)
+    dosis_actual = models.PositiveIntegerField(
+        _('No. Dosis Actual'),
+        default=1,
+        help_text="Para medicamentos secuenciales, indica qué dosis es esta (1ra, 2da, etc)."
+    )
+    
     cita_origen = models.ForeignKey('Appointment', on_delete=models.SET_NULL, null=True, blank=True, related_name='recordatorios_generados')
     enfermero_sugerido = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='recordatorios_asignados')
 

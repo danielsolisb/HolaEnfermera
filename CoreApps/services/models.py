@@ -101,6 +101,12 @@ class Medication(models.Model):
         help_text=_('Si se marca, el sistema generará automáticamente el siguiente recordatorio al completar el actual.')
     )
     
+    es_secuencial = models.BooleanField(
+        _('Es Esquema Secuencial (Vacunas)'),
+        default=False,
+        help_text=_('Si se marca, el sistema seguirá un mapa de dosis finito (ej: 1ra, 2da, 3ra dosis).')
+    )
+    
     activo = models.BooleanField(default=True)
 
     class Meta:
@@ -109,3 +115,33 @@ class Medication(models.Model):
 
     def __str__(self):
         return f"{self.nombre} (Cada {self.frecuencia_valor} {self.get_frecuencia_unidad_display()})"
+
+
+class MedicationDoseStep(models.Model):
+    """
+    Define los saltos entre dosis para medicamentos secuenciales.
+    Ej: Para el VPH, del paso 1 al 2 esperar 2 meses.
+    """
+    UNIDADES_TIEMPO = Medication.UNIDADES_TIEMPO
+
+    medicamento = models.ForeignKey(Medication, on_delete=models.CASCADE, related_name='pasos_esquema')
+    numero_dosis_siguiente = models.PositiveIntegerField(
+        _('Dosis Siguiente'),
+        help_text="A qué número de dosis saltamos tras completar la actual."
+    )
+    espera_valor = models.PositiveIntegerField(_('Esperar...'), default=1)
+    espera_unidad = models.CharField(
+        _('Unidad de Tiempo'),
+        max_length=10,
+        choices=UNIDADES_TIEMPO,
+        default='MESES'
+    )
+
+    class Meta:
+        verbose_name = "Paso de Esquema"
+        verbose_name_plural = "Pasos de Esquemas de Dosis"
+        unique_together = ('medicamento', 'numero_dosis_siguiente')
+        ordering = ['medicamento', 'numero_dosis_siguiente']
+
+    def __str__(self):
+        return f"{self.medicamento.nombre} -> Dosis {self.numero_dosis_siguiente} (en {self.espera_valor} {self.espera_unidad})"

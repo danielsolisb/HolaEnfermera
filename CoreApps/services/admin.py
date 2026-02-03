@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ServiceCategory, Service, Medication
+from .models import ServiceCategory, Service, Medication, MedicationDoseStep
 
 @admin.register(ServiceCategory)
 class ServiceCategoryAdmin(admin.ModelAdmin):
@@ -32,11 +32,16 @@ class ServiceAdmin(admin.ModelAdmin):
         }),
     )
 
+class MedicationDoseStepInline(admin.TabularInline):
+    model = MedicationDoseStep
+    extra = 1
+
 @admin.register(Medication)
 class MedicationAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'frecuencia_legible', 'es_recurrente', 'activo')
+    list_display = ('nombre', 'frecuencia_legible', 'es_recurrente', 'es_secuencial', 'activo')
     search_fields = ('nombre',)
-    list_filter = ('es_recurrente', 'frecuencia_unidad', 'activo')
+    list_filter = ('es_recurrente', 'es_secuencial', 'frecuencia_unidad', 'activo')
+    inlines = [MedicationDoseStepInline]
     
     def frecuencia_legible(self, obj):
         return f"Cada {obj.frecuencia_valor} {obj.get_frecuencia_unidad_display()}"

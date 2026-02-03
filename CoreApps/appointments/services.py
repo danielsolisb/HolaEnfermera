@@ -6,7 +6,7 @@ from django.utils.crypto import get_random_string
 
 # Importamos modelos
 from CoreApps.appointments.models import Appointment, AppointmentStatus, AppointmentReminder
-from CoreApps.services.models import Medication
+from CoreApps.services.models import Medication, MedicationDoseStep
 from CoreApps.scheduling.models import NurseSchedule
 from CoreApps.services.models import Service
 from CoreApps.users.models import CustomerProfile
@@ -287,39 +287,75 @@ class BookingManager:
     @staticmethod
     def create_next_cycle_reminder(reminder_actual):
         """
-        Crea automáticamente el siguiente recordatorio para medicamentos recurrentes.
-        Toma como base la fecha_limite_sugerida del recordatorio actual para mantener la precisión.
+        Crea automáticamente el siguiente recordatorio.
+        Soporta dos modos:
+        1. RECURRENTE: Ciclo infinito con frecuencia fija.
+        2. SECUENCIAL: Siguiendo un mapa de dosis finito (Pasos).
         """
-        # 1. Validaciones previas
-        if not reminder_actual.medicamento_catalogo or not reminder_actual.medicamento_catalogo.es_recurrente:
+        med = reminder_actual.medicamento_catalogo
+        if not med:
             return None
 
-        # 2. Evitar duplicados: No crear si ya existe uno PENDIENTE para el mismo paciente y medicamento
+        # 1. Validar que sea Recurrente O Secuencial
+        if not med.es_recurrente and not med.es_secuencial:
+            return None
+
+        # 2. Evitar duplicados PENDIENTES
         exists = AppointmentReminder.objects.filter(
             paciente=reminder_actual.paciente,
-            medicamento_catalogo=reminder_actual.medicamento_catalogo,
+            medicamento_catalogo=med,
             estado='PENDIENTE'
         ).exists()
 
         if exists:
             return None
 
-        # 3. Crear el nuevo ciclo
-        # Importante: Como 'base' usamos la fecha proyectada del anterior (ej: 27 de enero)
-        # aunque el admin lo esté cerrando el 25 de enero.
+        # 3. Preparar datos base para el nuevo recordatorio
         proxima_fecha_base = reminder_actual.fecha_limite_sugerida
+        params_nuevo = {
+            'paciente': reminder_actual.paciente,
+            'medicamento_catalogo': med,
+            'medicamento_externo': reminder_actual.medicamento_externo,
+            'origen': 'SISTEMA',
+            'estado': 'PENDIENTE',
+            'fecha_ultima_aplicacion': proxima_fecha_base,
+        }
 
-        nuevo_recordatorio = AppointmentReminder(
-            paciente=reminder_actual.paciente,
-            medicamento_catalogo=reminder_actual.medicamento_catalogo,
-            medicamento_externo=reminder_actual.medicamento_externo,
-            origen='SISTEMA',
-            estado='PENDIENTE',
-            fecha_ultima_aplicacion=proxima_fecha_base, # Base para el nuevo cálculo
-            notas=f"Ciclo automático generado desde recordatorio #{reminder_actual.id}."
-        )
-        
-        # El save() del modelo se encargará de sumar la frecuencia (1 año, 6 meses, etc.)
-        nuevo_recordatorio.save()
-        
-        return nuevo_recordatorio
+        # 4. Lógica de Diferenciación
+        if med.es_recurrente:
+            # Caso Perpetuo: Sigue usando la frecuencia base del medicamento
+            params_nuevo['notas'] = f"Ciclo automático RECURRENTE generado desde recordatorio #{reminder_actual.id}."
+            nuevo_recordatorio = AppointmentReminder(**params_nuevo)
+            nuevo_recordatorio.save() # El save() del modelo calcula la fecha con frecuencia_valor
+            return nuevo_recordatorio
+
+        elif med.es_secuencial:
+            # Caso Secuencial: Buscamos el siguiente paso en la tabla de dosis
+            siguiente_nro = reminder_actual.dosis_actual + 1
+            paso = MedicationDoseStep.objects.filter(
+                medicamento=med, 
+                numero_dosis_siguiente=siguiente_nro
+            ).first()
+
+            if paso:
+                params_nuevo['dosis_actual'] = siguiente_nro
+                params_nuevo['notas'] = f"Ciclo automático SECUENCIAL generado (Dosis {siguiente_nro}) desde recordatorio #{reminder_actual.id}."
+                
+                nuevo_recordatorio = AppointmentReminder(**params_nuevo)
+                
+                # Para secuenciales, calculamos la fecha manualmente aquí usando el intervalo del PASO
+                # para que el model.save() no use la frecuencia genérica.
+                if paso.espera_unidad == 'DIAS':
+                    nuevo_recordatorio.fecha_limite_sugerida = proxima_fecha_base + timedelta(days=paso.espera_valor)
+                elif paso.espera_unidad == 'MESES':
+                    nuevo_recordatorio.fecha_limite_sugerida = nuevo_recordatorio._add_months(proxima_fecha_base, paso.espera_valor)
+                elif paso.espera_unidad == 'ANIOS':
+                    nuevo_recordatorio.fecha_limite_sugerida = nuevo_recordatorio._add_months(proxima_fecha_base, paso.espera_valor * 12)
+                
+                nuevo_recordatorio.save()
+                return nuevo_recordatorio
+            else:
+                # No hay más pasos definidos = Esquema completado.
+                return None
+
+        return None

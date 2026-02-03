@@ -39,11 +39,58 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
+                    <!-- SECCIÓN DINÁMICA DE DOSIS SECUENCIALES -->
+                    <div id="section-sequential" style="display: none;">
+                        <hr>
+                        <h4 class="text-main text-bold">Pasos del Esquema Secuencial</h4>
+                        <p class="text-muted mar-btm">Define los intervalos de espera para las siguientes dosis (ej: la dosis 2 se aplica 2 meses después de la 1).</p>
+                        
+                        {{ dose_steps.management_form }}
+                        <div id="dose-steps-container">
+                            {% for dose_form in dose_steps %}
+                            <div class="well dose-step-row mar-btm" style="padding: 15px; background: #f9f9f9;">
+                                {% for hidden in dose_form.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+                                <div class="row">
+                                    <div class="col-sm-4">
+                                        <label class="control-label text-bold">Siguiente Dosis #</label>
+                                        {{ dose_form.numero_dosis_siguiente }}
+                                    </div>
+                                    <div class="col-sm-3">
+                                        <label class="control-label text-bold">Esperar...</label>
+                                        {{ dose_form.espera_valor }}
+                                    </div>
+                                    <div class="col-sm-3">
+                                        <label class="control-label text-bold">Unidad</label>
+                                        {{ dose_form.espera_unidad }}
+                                    </div>
+                                    {% if dose_steps.can_delete %}
+                                    <div class="col-sm-2 text-center" style="padding-top: 25px;">
+                                        <div class="checkbox">
+                                            {{ dose_form.DELETE }}
+                                            <label class="text-danger text-bold">Borrar</label>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <button type="button" id="add-dose-step" class="btn btn-sm btn-info mar-btm">
+                            <i class="demo-pli-add"></i> Añadir otra dosis
+                        </button>
+                    </div>
+
+                    <div class="form-group mar-top">
                         <div class="col-sm-offset-3 col-sm-9">
                             <div class="checkbox pad-btm text-left">
                                 {{ form.es_recurrente }}
                                 <label for="id_es_recurrente" class="text-bold text-dark">Activar recordatorio cíclico (de por vida)</label>
+                            </div>
+                            <div class="checkbox pad-btm text-left">
+                                {{ form.es_secuencial }}
+                                <label for="id_es_secuencial" class="text-bold text-dark">Activar esquema de dosis secuencial (ej: vacunas)</label>
                             </div>
                             <div class="checkbox pad-btm text-left">
                                 {{ form.activo }}
@@ -61,4 +108,63 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkSecuencial = document.getElementById('id_es_secuencial');
+    const checkRecurrente = document.getElementById('id_es_recurrente');
+    const sectionSequential = document.getElementById('section-sequential');
+    const container = document.getElementById('dose-steps-container');
+    const addButton = document.getElementById('add-dose-step');
+    const totalForms = document.getElementById('id_pasos_esquema-TOTAL_FORMS');
+
+    // 1. Mostrar/Ocultar sección según el checkbox
+    function toggleSection() {
+        sectionSequential.style.display = checkSecuencial.checked ? 'block' : 'none';
+        if(checkSecuencial.checked) {
+            checkRecurrente.checked = false;
+        }
+    }
+    
+    checkSecuencial.addEventListener('change', toggleSection);
+    checkRecurrente.addEventListener('change', function() {
+        if(this.checked) checkSecuencial.checked = false;
+        toggleSection();
+    });
+    
+    toggleSection();
+
+    // 2. Dinamismo para añadir filas
+    addButton.addEventListener('click', function() {
+        let formCount = parseInt(totalForms.value);
+        let rows = container.querySelectorAll('.dose-step-row');
+        let newRow = rows[0].cloneNode(true);
+        
+        // Limpiar valores y actualizar name/id con el nuevo índice
+        newRow.querySelectorAll('input, select').forEach(input => {
+            if(input.name) {
+                const name = input.getAttribute('name').replace('-0-', `-${formCount}-`);
+                const id = input.getAttribute('id').replace('-0-', `-${formCount}-`);
+                input.setAttribute('name', name);
+                input.setAttribute('id', id);
+                
+                if (input.type === 'number') input.value = '';
+                if (input.type === 'hidden') {
+                    // Limpiar el ID del objeto si es un row clonado
+                    if(input.name.includes('-id')) input.value = '';
+                }
+                if (input.type === 'checkbox') input.checked = false;
+            }
+        });
+
+        container.appendChild(newRow);
+        totalForms.value = formCount + 1;
+        
+        // Re-inicializar selectpickers de Nifty/Bootstrap si están presentes
+        if(window.jQuery && jQuery.fn.selectpicker) {
+            $(newRow).find('.selectpicker').selectpicker('render');
+        }
+    });
+});
+</script>
 {% endblock %}
