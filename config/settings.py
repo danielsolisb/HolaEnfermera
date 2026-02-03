@@ -28,7 +28,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 #SECRET_KEY = 'django-insecure-66s#9i%dd0h*6e$z9%w!m32-&7&^r&q#!efyzpjd-_=z4lf69l'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 CSRF_TRUSTED_ORIGINS = [
     'https://holaenfermera.ecuapulselab.com',
