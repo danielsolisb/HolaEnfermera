@@ -1,0 +1,154 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Crear Campaña | Hola Enfermera{% endblock %}
+
+{% block page_title %}Diseñador de Campañas (WhatsApp){% endblock %}
+
+{% block breadcrumb %}
+    <li>CRM y Marketing</li>
+    <li><a href="{% url 'crm_marketing:campaign_list' %}">Campañas</a></li>
+    <li class="active">Nueva</li>
+{% endblock %}
+
+{% block extra_css %}
+    <link href="{% static 'plugins/select2/css/select2.min.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<form method="POST" action="">
+    {% csrf_token %}
+    <div class="row">
+        
+        <div class="col-lg-6">
+            <div class="panel">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Paso 1: Plantilla del Mensaje</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="form-group mar-btm text-lg">
+                        <label class="control-label text-bold">Nombre Interno de la Campaña</label>
+                        {{ form.nombre.errors }}
+                        <input type="text" name="nombre" class="form-control input-lg" placeholder="Ej: Promo Dia de la Madre (Guayas)" value="{{ form.nombre.value|default_if_none:'' }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label text-bold">Cuerpo del WhatsApp</label>
+                        {{ form.mensaje_plantilla.errors }}
+                        <textarea name="mensaje_plantilla" class="form-control" rows="10" placeholder="Escribe el mensaje aquí..." required>{{ form.mensaje_plantilla.value|default_if_none:'' }}</textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Variables dinámicas soportadas:</strong><br>
+                        Puedes usar <code>{nombres}</code>, <code>{apellidos}</code>, o <code>{farmacia}</code> dentro del texto. El sistema los reemplazará al enviar.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="panel">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Paso 2: Segmentación y Filtros (AND)</h3>
+                </div>
+                <div class="panel-body">
+                    
+                    <h5 class="text-main">A. Por Edad (Dinámico)</h5>
+                    <p class="text-sm text-muted">Aviso: Si dejas esto en blanco, se incluirán absolutamente todas las edades.</p>
+                    <div class="row mar-btm">
+                        <div class="col-sm-6">
+                            <label class="control-label text-sm">Desde (Años)</label>
+                            <input type="number" name="edad_minima" class="form-control" placeholder="Ej: 18 (Vacío = Sin límite inferior)" value="{{ form.edad_minima.value|default_if_none:'' }}">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="control-label text-sm">Hasta (Años)</label>
+                            <input type="number" name="edad_maxima" class="form-control" placeholder="Ej: 65 (Vacío = Sin límite superior)" value="{{ form.edad_maxima.value|default_if_none:'' }}">
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h5 class="text-main">B. Por Comportamiento de Compra</h5>
+                    <div class="form-group mar-btm">
+                        <label class="control-label text-sm">Debe haber comprado (Medicamento):</label>
+                        <select id="select-productos" name="medicamentos_objetivo" class="form-control select2" multiple="multiple" data-placeholder="&rarr; APLICA A TODOS &larr; (O selecciona específicos aquí)">
+                            <option value="ALL">--- 🌟 APLICAR A TODOS ---</option>
+                            {% for prod in productos %}
+                                <option value="{{ prod.id }}" {% if prod.id in form.medicamentos_objetivo.value|default:'' %}selected{% endif %}>{{ prod.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted d-block mar-top">Por defecto se incluye a <strong>todos</strong>. Solo selecciona algo si deseas limitar la campaña a un producto específico.</small>
+                    </div>
+
+                    <hr>
+                    
+                    <h5 class="text-main">C. Por Ubicación u Origen</h5>
+                    <div class="form-group">
+                        <label class="control-label text-sm">Filtrar por Ciudades:</label>
+                        <select name="ciudades_objetivo" class="form-control select2" multiple="multiple" data-placeholder="&rarr; APLICA A TODAS &larr; (O selecciona específicas aquí)">
+                            <option value="ALL">--- 🌟 APLICAR A TODAS LAS CIUDADES ---</option>
+                            {% for c in ciudades %}
+                                <option value="{{ c.id }}" {% if c.id in form.ciudades_objetivo.value|default:'' %}selected{% endif %}>{{ c.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label text-sm">Pertenecientes a Farmacias:</label>
+                        <select name="farmacias_objetivo" class="form-control select2" multiple="multiple" data-placeholder="&rarr; APLICA A TODAS &larr; (O selecciona específicas aquí)">
+                            <option value="ALL">--- 🌟 APLICAR A TODAS LAS FARMACIAS ---</option>
+                            {% for f in farmacias %}
+                                <option value="{{ f.id }}" {% if f.id in form.farmacias_objetivo.value|default:'' %}selected{% endif %}>{{ f.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group bg-gray-light pad-all rounded">
+                        <label class="control-label text-sm text-bold text-main">¿Hacer Campaña por Etiquetas? (VIP, Prioridad, etc)</label>
+                        <p class="text-xs text-muted mar-no">Si asignaste etiquetas coloridas a tus contactos, escógelas aquí abajo para enviar la promoción solo a ellos. Si lo dejas vacío, ignora las etiquetas.</p>
+                        <select name="etiquetas_objetivo" class="form-control select2 mar-top" multiple="multiple" data-placeholder="Buscar etiqueta... (Vacío = Ignorar filtro de etiquetas)">
+                            <option value="ALL">--- 🌟 IGNORAR FILTRO DE ETIQUETAS ---</option>
+                            {% for tag in etiquetas %}
+                                <option value="{{ tag.id }}" {% if tag.id in form.etiquetas_objetivo.value|default:'' %}selected{% endif %}>{{ tag.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <hr>
+                    <h5 class="text-main">D. Configuración de Envío</h5>
+                    <div class="form-group mar-btm">
+                        <label class="control-label text-sm text-bold">Fecha Programada (Opcional, déjalo vacío para ahora):</label>
+                        {{ form.fecha_programada.errors }}
+                        {{ form.fecha_programada }}
+                    </div>
+                </div>
+                <div class="panel-footer text-right">
+                    <a href="{% url 'crm_marketing:campaign_list' %}" class="btn btn-default">Cancelar</a>
+                    <button type="submit" class="btn btn-primary btn-lg"><i class="fa fa-save"></i> Guardar Campaña</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'plugins/select2/js/select2.min.js' %}"></script>
+    <script>
+        $(document).ready(function() {
+            $(".select2").select2({
+                width: '100%'
+            });
+
+            // Lógica para el botón de "Todos"
+            $('.select2').on('select2:select', function (e) {
+                var data = e.params.data;
+                // Si el usuario selecciona la opción especial "ALL"
+                if (data.id === 'ALL') {
+                    // Limpia toda la caja de selección (lo cual la devuelve a su estado base de "Todos")
+                    $(this).val(null).trigger('change');
+                }
+            });
+        });
+    </script>
+{% endblock %}

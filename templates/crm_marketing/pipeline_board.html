@@ -1,0 +1,329 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Pipeline CRM | Hola Enfermera{% endblock %}
+
+{% block page_title %}Administración de Leads (Pipeline){% endblock %}
+
+{% block extra_css %}
+<style>
+    .pipeline-wrapper {
+        display: flex;
+        overflow-x: auto;
+        padding-bottom: 20px;
+        gap: 15px;
+        min-height: calc(100vh - 250px);
+        align-items: flex-start;
+    }
+
+    .pipeline-column {
+        background-color: #ebedef;
+        border-radius: 8px;
+        width: 300px;
+        min-width: 300px;
+        display: flex;
+        flex-direction: column;
+        max-height: 100%;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .column-header {
+        padding: 15px;
+        border-bottom: 2px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .column-title {
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 13px;
+        color: #495057;
+        margin: 0;
+    }
+
+    .column-count {
+        background: #dee2e6;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+    }
+
+    .cards-container {
+        padding: 10px;
+        min-height: 200px;
+        overflow-y: auto;
+    }
+
+    .lead-card {
+        background: white;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 10px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        cursor: grab;
+        border-left: 4px solid #ced4da;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .lead-card:active { cursor: grabbing; }
+    .lead-card:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.15); transform: translateY(-2px); }
+
+    /* Colores por Etapa */
+    .col-lead { border-left-color: #3498db; }
+    .col-contactado { border-left-color: #f1c40f; }
+    .col-negociacion { border-left-color: #e67e22; }
+    .col-ganado { border-left-color: #2ecc71; }
+    .col-perdido { border-left-color: #e74c3c; }
+
+    .lead-name { font-weight: 600; margin-bottom: 5px; color: #2c3e50; }
+    .lead-info { font-size: 11px; color: #7f8c8d; }
+    
+    /* Drawer lateral */
+    .chat-drawer {
+        position: fixed;
+        top: 0;
+        right: -400px;
+        width: 400px;
+        height: 100vh;
+        background: white;
+        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+        z-index: 1050;
+        transition: right 0.3s ease;
+        display: flex;
+        flex-direction: column;
+    }
+    .chat-drawer.open { right: 0; }
+    
+    /* Overlay para cerrar al hacer clic fuera */
+    .drawer-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.3);
+        z-index: 1040;
+        display: none;
+    }
+    .drawer-overlay.active { display: block; }
+    
+    .drawer-header {
+        padding: 15px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .drawer-body {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 15px;
+        background-color: #f0f2f5;
+        background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+    }
+    
+    .drawer-footer {
+        padding: 15px;
+        border-top: 1px solid #dee2e6;
+        background: white;
+    }
+
+    /* Burbujas compactas para el drawer */
+    .msg-bubble {
+        max-width: 85%;
+        padding: 6px 10px;
+        border-radius: 8px;
+        margin-bottom: 4px;
+        font-size: 13px;
+        box-shadow: 0 1px 0.5px rgba(0,0,0,0.1);
+    }
+    .msg-in { align-self: flex-start; background: white; }
+    .msg-out { align-self: flex-end; background: #dcf8c6; }
+    
+    .sortable-ghost { opacity: 0.4; }
+    .sortable-chosen { background-color: #f8f9fa; }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="row">
+    <div class="col-sm-12">
+        <div class="pipeline-wrapper" id="pipeline-container">
+            
+            {% for col in columnas %}
+            <div class="pipeline-column">
+                <div class="column-header">
+                    <h5 class="column-title">{{ col.etapa.nombre }}</h5>
+                    <span class="column-count">{{ col.contactos.count }}</span>
+                </div>
+                
+                <div class="cards-container" id="list-{{ col.etapa.id }}" data-etapa="{{ col.etapa.id }}">
+                    {% for contacto in col.contactos %}
+                    <div class="lead-card col-{{ col.etapa.id|lower }}" data-id="{{ contacto.id }}">
+                        <div class="lead-name">{{ contacto.nombres }} {{ contacto.apellidos }}</div>
+                        <div class="lead-info">
+                            <div><i class="fa fa-phone"></i> {{ contacto.telefono }}</div>
+                            <div><i class="fa fa-calendar"></i> Registro: {{ contacto.fecha_registro|date:"d/m/y" }}</div>
+                            {% if contacto.ciudad %}
+                                <div class="mar-top-xs"><span class="label label-default">{{ contacto.ciudad.nombre }}</span></div>
+                            {% endif %}
+                        </div>
+                        <div class="mar-top-sm text-right">
+                             <a href="{% url 'crm_marketing:contact_detail' contacto.id %}" class="btn btn-xs btn-default btn-icon" title="Ver Detalle"><i class="fa fa-eye"></i></a>
+                             <button type="button" class="btn btn-xs btn-info btn-icon" onclick="openQuickChat({{ contacto.id }}, '{{ contacto.nombres|escapejs }} {{ contacto.apellidos|escapejs }}')" title="Chat Rápido"><i class="fa fa-comment"></i></button>
+                             <a href="{% url 'chat:inbox' %}?contact_id={{ contacto.id }}" class="btn btn-xs btn-success btn-icon" title="Ir al Inbox Full"><i class="fab fa-whatsapp"></i></a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+    </div>
+</div>
+
+<!-- Overlay y Drawer de Chat Lateral -->
+<div id="drawer-overlay" class="drawer-overlay" onclick="closeQuickChat()"></div>
+<div id="quick-chat-drawer" class="chat-drawer">
+    <div class="drawer-header">
+        <h4 class="mar-no" id="drawer-title">Chat Rápido</h4>
+        <div>
+            <a id="drawer-full-link" href="#" class="btn btn-xs btn-default btn-icon" title="Abrir en pantalla completa"><i class="fa fa-expand"></i></a>
+            <button class="btn btn-xs btn-danger btn-icon" onclick="closeQuickChat()"><i class="fa fa-times"></i></button>
+        </div>
+    </div>
+    <div class="drawer-body d-flex flex-column" id="drawer-messages" style="display: flex; flex-direction: column;">
+        <!-- Mensajes aquí -->
+    </div>
+    <div class="drawer-footer">
+        <div class="input-group">
+            <input type="text" id="drawer-input" class="form-control" placeholder="Escribe algo...">
+            <span class="input-group-btn">
+                <button class="btn btn-info" type="button" id="drawer-send-btn"><i class="fa fa-paper-plane"></i></button>
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Cargamos SortableJS desde CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    let currentDrawerContactId = null;
+    let drawerRefreshInterval = null;
+
+    $(document).ready(function() {
+        const containers = document.querySelectorAll('.cards-container');
+        
+        containers.forEach(container => {
+            new Sortable(container, {
+                group: 'pipeline',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                onEnd: function(evt) {
+                    const contactId = evt.item.getAttribute('data-id');
+                    const newEtapa = evt.to.getAttribute('data-etapa');
+                    
+                    if (evt.from !== evt.to) {
+                        updateLeadStage(contactId, newEtapa);
+                        updateCounts();
+                    }
+                }
+            });
+        });
+
+        $('#drawer-send-btn').on('click', sendDrawerMessage);
+        $('#drawer-input').on('keypress', function(e) { if(e.which == 13) sendDrawerMessage(); });
+    });
+
+    function openQuickChat(id, nombre) {
+        currentDrawerContactId = id;
+        $('#drawer-title').text(nombre);
+        $('#drawer-full-link').attr('href', `/chat/inbox/?contact_id=${id}`);
+        $('#quick-chat-drawer').addClass('open');
+        $('#drawer-overlay').addClass('active');
+        
+        loadDrawerMessages(id);
+        if (drawerRefreshInterval) clearInterval(drawerRefreshInterval);
+        drawerRefreshInterval = setInterval(() => loadDrawerMessages(id), 5000);
+    }
+
+    function closeQuickChat() {
+        $('#quick-chat-drawer').removeClass('open');
+        $('#drawer-overlay').removeClass('active');
+        if (drawerRefreshInterval) clearInterval(drawerRefreshInterval);
+        currentDrawerContactId = null;
+    }
+
+    function loadDrawerMessages(contactId) {
+        if (currentDrawerContactId !== contactId) return;
+        
+        $.getJSON(`/chat/api/chats/${contactId}/`, function(data) {
+            const container = $('#drawer-messages');
+            let html = '';
+            data.mensajes.forEach(m => {
+                const typeClass = m.direccion === 'OUTBOUND' ? 'msg-out' : 'msg-in';
+                html += `<div class="msg-bubble ${typeClass}">${m.texto}</div>`;
+            });
+            container.html(html);
+            container.scrollTop(container[0].scrollHeight);
+        });
+    }
+
+    function sendDrawerMessage() {
+        const input = $('#drawer-input');
+        const text = input.val().trim();
+        if (!text || !currentDrawerContactId) return;
+
+        input.val('');
+        $.ajax({
+            url: `/chat/api/chats/${currentDrawerContactId}/send/`,
+            type: 'POST',
+            data: JSON.stringify({ texto: text }),
+            contentType: 'application/json',
+            headers: {"X-CSRFToken": "{{ csrf_token }}"},
+            success: function() { loadDrawerMessages(currentDrawerContactId); }
+        });
+    }
+
+    function updateLeadStage(contactId, etapa) {
+        fetch("{% url 'crm_marketing:api_update_stage' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                contacto_id: contactId,
+                etapa: etapa
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert("Error al actualizar etapa: " + data.error);
+                location.reload(); // Revertir visualmente
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Error de conexión");
+        });
+    }
+
+    function updateCounts() {
+        $('.pipeline-column').each(function() {
+            const count = $(this).find('.lead-card').length;
+            $(this).find('.column-count').text(count);
+        });
+    }
+</script>
+{% endblock %}

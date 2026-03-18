@@ -35,6 +35,12 @@ urlpatterns = [
     # localhost:8000/citas/api/availability/
     path('citas/', include('CoreApps.appointments.urls')),
     path('', include('CoreApps.services.urls')),
+    
+    # Rutas del Módulo CRM
+    path('crm/', include('CoreApps.crm_marketing.urls')),
+    
+    # Rutas del Web y Dashboard del Chat
+    path('chat/', include('CoreApps.chat.urls')),
 
     # --- API DOCUMENTATION URLS ---
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

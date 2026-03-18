@@ -1,0 +1,398 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}WhatsApp Inbox | Hola Enfermera{% endblock %}
+
+{% block page_title %}Bandeja de Entrada en Vivo{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: calc(100vh - 250px);
+        min-height: 500px;
+        border-radius: 5px;
+        overflow: hidden;
+        background-color: #fff;
+        border: 1px solid #e1e7ec;
+        display: flex;
+    }
+    
+    .chat-sidebar {
+        width: 350px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #e1e7ec;
+        background: #f9f9f9;
+        flex-shrink: 0;
+    }
+
+    .chat-list-wrapper {
+        flex-grow: 1;
+        overflow-y: auto;
+    }
+
+    .chat-item {
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: block;
+        position: relative;
+    }
+
+    .chat-item:hover {
+        background: #f0f3f5;
+    }
+    
+    .chat-item.active {
+        background: #e6f7ff;
+        border-left: 4px solid #00A6ED;
+    }
+
+    .chat-content-main {
+        flex-grow: 1;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background-color: #f0f2f5;
+    }
+
+    .chat-header {
+        padding: 10px 20px;
+        border-bottom: 1px solid #e1e7ec;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        min-height: 60px;
+    }
+
+    .chat-messages {
+        flex-grow: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+        background-repeat: repeat;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* BURBUJAS ESTILO WHATSAPP */
+    .message-bubble {
+        max-width: 70%;
+        padding: 8px 12px;
+        border-radius: 7.5px;
+        margin-bottom: 4px;
+        position: relative;
+        font-size: 14px;
+        line-height: 1.4;
+        box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+    }
+
+    .msg-out {
+        align-self: flex-end;
+        background-color: #dcf8c6;
+        border-top-right-radius: 0;
+    }
+
+    .msg-in {
+        align-self: flex-start;
+        background-color: #fff;
+        border-top-left-radius: 0;
+    }
+
+    .msg-meta {
+        font-size: 10px;
+        color: rgba(0, 0, 0, 0.45);
+        margin-left: 8px;
+        float: right;
+        margin-top: 4px;
+    }
+
+    .chat-input-area {
+        padding: 10px 20px;
+        background: #f0f2f5;
+        border-top: 1px solid #ccc;
+    }
+
+    .unread-indicator {
+        width: 10px;
+        height: 10px;
+        background-color: #25d366;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    /* Desktop Responsive fix */
+    @media (max-width: 768px) {
+        .chat-sidebar { width: 100%; }
+        .chat-content-main { display: none; }
+        .chat-container.mobile-active .chat-sidebar { display: none; }
+        .chat-container.mobile-active .chat-content-main { display: flex; width: 100%; }
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="row">
+    <div class="col-sm-12">
+        <div class="chat-container" id="main-chat-container">
+            
+            <!-- LATERAL: Lista de Contactos -->
+            <div class="chat-sidebar">
+                <div class="pad-all bg-dark text-light">
+                    <div class="pull-right">
+                        <button class="btn btn-icon btn-xs btn-default" onclick="loadChatList()" title="Refrescar">
+                            <i class="fa fa-refresh"></i>
+                        </button>
+                    </div>
+                    <span class="text-bold"><i class="fab fa-whatsapp text-success icon-lg mar-rgt"></i> Mensajes</span>
+                </div>
+                
+                <div class="chat-list-wrapper" id="chat-list-container">
+                    <!-- JS cargará los items aquí -->
+                    <div class="text-center pad-all text-muted">
+                        <i class="fa fa-circle-o-notch fa-spin fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRINCIPAL: Ventana de Chat -->
+            <div class="chat-content-main">
+                
+                <!-- Header de chat activo -->
+                <div class="chat-header" id="active-chat-header" style="display: none;">
+                    <button class="btn btn-default btn-xs visible-xs mar-rgt" onclick="toggleMobile()"><i class="fa fa-arrow-left"></i></button>
+                    <div class="media">
+                        <div class="media-left">
+                            <img id="header-avatar" class="img-circle img-sm" src="" alt="">
+                        </div>
+                        <div class="media-body">
+                            <div class="pull-right">
+                                <button class="btn btn-sm btn-icon btn-hover-danger" onclick="clearChat()" title="Vaciar historial de chat">
+                                    <i class="fa fa-trash-o"></i> Vaciar Chat
+                                </button>
+                            </div>
+                            <h4 class="mar-no" id="header-name">Cargando...</h4>
+                            <small class="text-muted" id="header-phone"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Zona de Mensajes -->
+                <div class="chat-messages" id="chat-messages-container">
+                    <div class="text-center text-muted" style="margin-top: 20%; opacity: 0.6;">
+                        <i class="fab fa-whatsapp icon-5x mar-btm"></i>
+                        <h3>Hola Enfermera Web</h3>
+                        <p>Selecciona un chat a la izquierda para interactuar en vivo.</p>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="chat-input-area" id="active-chat-input" style="display: none;">
+                    <div class="input-group">
+                        <input type="text" id="btn-input-text" class="form-control input-lg" placeholder="Escribe un mensaje..." autocomplete="off">
+                        <span class="input-group-btn">
+                            <button class="btn btn-success btn-lg" type="button" id="btn-chat-send">
+                                <i class="fa fa-paper-plane"></i>
+                            </button>
+                        </span>
+                    </div>
+                </div>
+                
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let activeContactId = null;
+    let refreshInterval = null;
+
+    $(document).ready(function() {
+        loadChatList();
+        
+        // Polling para el listado global cada 10 segundos
+        setInterval(loadChatList, 10000);
+
+        // Envío de mensaje
+        $('#btn-chat-send').on('click', sendMessage);
+        $('#btn-input-text').on('keypress', function(e) {
+            if(e.which == 13) sendMessage();
+        });
+    });
+
+    function loadChatList() {
+        // Obtenemos el ID forzado desde el contexto (inyectado por Django)
+        const forceId = "{{ auto_open_contact_id|default:'' }}";
+        const url = "{% url 'chat:api_chat_list' %}" + (forceId ? "?force_contact_id=" + forceId : "");
+
+        $.getJSON(url, function(data) {
+            const container = $('#chat-list-container');
+            if (data.chats.length === 0) {
+                container.html('<div class="pad-all text-center text-muted">No hay chats aún.</div>');
+                return;
+            }
+
+            let html = '';
+            data.chats.forEach(chat => {
+                const isActive = (chat.id == activeContactId || (!activeContactId && chat.id == forceId)) ? 'active' : '';
+                const unread = chat.no_leido ? '<span class="unread-indicator pull-right"></span>' : '';
+                const directionPrefix = chat.direccion_ultimo === 'OUTBOUND' ? '<span>Usted: </span>' : '';
+                
+                html += `
+                    <div class="chat-item ${isActive}" data-id="${chat.id}" onclick="openChat(${chat.id}, '${chat.nombre}', '${chat.telefono}')">
+                        <div class="media">
+                            <div class="media-left">
+                                <img class="img-circle img-sm" src="https://ui-avatars.com/api/?name=${encodeURIComponent(chat.nombre)}&background=random" alt="">
+                            </div>
+                            <div class="media-body">
+                                <p class="mar-no text-bold">
+                                    ${chat.nombre} ${unread}
+                                    <small class="text-muted pull-right" style="font-weight:normal;">${chat.fecha_ultimo || ''}</small>
+                                </p>
+                                <p class="text-muted mar-no text-sm truncate" style="max-width: 200px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                                    ${directionPrefix}${chat.ultimo_mensaje || 'Sin mensajes aún'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.html(html);
+
+            // Apertura automática si viene del Pipeline y no hay un chat abierto activamente
+            if (forceId && !activeContactId) {
+                const autoTarget = data.chats.find(c => c.id == forceId);
+                if (autoTarget) {
+                    openChat(autoTarget.id, autoTarget.nombre, autoTarget.telefono);
+                }
+            }
+        });
+    }
+
+    function openChat(id, nombre, telefono) {
+        activeContactId = id;
+        
+        // UI
+        $('.chat-item').removeClass('active');
+        $(`.chat-item[data-id="${id}"]`).addClass('active');
+        $('#active-chat-header').show();
+        $('#active-chat-input').show();
+        $('#header-name').text(nombre);
+        $('#header-phone').text(telefono);
+        $('#header-avatar').attr('src', `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`);
+        $('#main-chat-container').addClass('mobile-active');
+
+        // Reset y Carga
+        const msgContainer = $('#chat-messages-container');
+        msgContainer.html('<div class="text-center mar-top"><i class="fa fa-circle-o-notch fa-spin fa-2x text-muted"></i></div>');
+        
+        fetchMessages(id);
+        
+        // Reiniciar intervalo de actualización para ESTE chat
+        if (refreshInterval) clearInterval(refreshInterval);
+        refreshInterval = setInterval(() => fetchMessages(id), 5000);
+    }
+
+    function fetchMessages(contactId) {
+        if (activeContactId !== contactId) return;
+
+        $.getJSON(`/chat/api/chats/${contactId}/`, function(data) {
+            const container = $('#chat-messages-container');
+            const isAtBottom = (container[0].scrollHeight - container.scrollTop() <= container.outerHeight() + 50);
+
+            let html = '';
+            data.mensajes.forEach(m => {
+                const typeClass = m.direccion === 'OUTBOUND' ? 'msg-out' : 'msg-in';
+                const estadoIcon = m.direccion === 'OUTBOUND' ? getEstadoItem(m.estado) : '';
+                
+                html += `
+                    <div class="message-bubble ${typeClass}">
+                        ${m.texto}
+                        <div class="msg-meta">${m.fecha} ${estadoIcon}</div>
+                    </div>
+                `;
+            });
+            
+            container.html(html);
+
+            // Auto-scroll solo si el usuario estaba abajo
+            if (isAtBottom) {
+                container.scrollTop(container[0].scrollHeight);
+            }
+        });
+    }
+
+    function getEstadoItem(st) {
+        if (st === 'LEIDO') return '<i class="fa fa-check-double text-info"></i>';
+        if (st === 'ENTREGADO') return '<i class="fa fa-check-double text-muted"></i>';
+        return '<i class="fa fa-check text-muted"></i>';
+    }
+
+    function sendMessage() {
+        const input = $('#btn-input-text');
+        const text = input.val().trim();
+        if (!text || !activeContactId) return;
+
+        // Optimismo UI: limpiar campo de inmediato
+        input.val('');
+        
+        $.ajax({
+            url: `/chat/api/chats/${activeContactId}/send/`,
+            type: 'POST',
+            data: JSON.stringify({ texto: text }),
+            contentType: 'application/json',
+            headers: {"X-CSRFToken": "{{ csrf_token }}"},
+            success: function(response) {
+                fetchMessages(activeContactId);
+            },
+            error: function(err) {
+                alert("Error al enviar: " + (err.responseJSON ? err.responseJSON.error : "Desconocido"));
+            }
+        });
+    }
+
+    function clearChat() {
+        if (!activeContactId) return;
+        
+        if (confirm("¿Estás seguro de que deseas eliminar TODOS los mensajes de este contacto? Esta acción no se puede deshacer.")) {
+            $.ajax({
+                url: `/chat/api/chats/${activeContactId}/clear/`,
+                type: 'POST',
+                headers: {"X-CSRFToken": "{{ csrf_token }}"},
+                success: function(response) {
+                    $.niftyNoty({
+                        type: 'success',
+                        icon: 'pli-like-2 icon-2x',
+                        message: `Historial vaciado: se eliminaron ${response.total_eliminados} mensajes.`,
+                        container: 'floating',
+                        timer: 3000
+                    });
+                    // Limpiar mensajes en pantalla
+                    $('#chat-messages-container').html(`
+                        <div class="text-center text-muted" style="margin-top: 20%; opacity: 0.6;">
+                            <i class="fab fa-whatsapp fa-5x"></i>
+                            <h4>Chat vaciado</h4>
+                            <p>No hay mensajes en este historial.</p>
+                        </div>
+                    `);
+                    // Refrescar lista lateral para actualizar el "Ultimo mensaje"
+                    loadChatList();
+                },
+                error: function(xhr) {
+                    alert("Error al vaciar chat: " + (xhr.responseJSON ? xhr.responseJSON.error : "Error desconocido"));
+                }
+            });
+        }
+    }
+
+    function toggleMobile() {
+        $('#main-chat-container').removeClass('mobile-active');
+    }
+</script>
+{% endblock %}

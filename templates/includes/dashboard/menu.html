@@ -70,6 +70,27 @@
         </li>
 
         <li class="list-divider"></li>
+        <li class="list-header">Marketing y CRM</li>
+        
+        <li>
+            <a href="#">
+                <i class="demo-pli-smartphone-3"></i>
+                <span class="menu-title">Campañas y Leads</span>
+                <i class="arrow"></i>
+            </a>
+            <ul class="collapse">
+                <li><a href="{% url 'crm_marketing:contact_list' %}">Directorio de Leads</a></li>
+                <li><a href="{% url 'crm_marketing:import_data' %}">Importar Archivos Excel</a></li>
+                <li><a href="{% url 'crm_marketing:etiqueta_list' %}">Administrar Etiquetas</a></li>
+                <li><a href="{% url 'crm_marketing:campaign_list' %}">Campañas de Medios</a></li>
+                <li><a href="{% url 'chat:inbox' %}">Inbox de WhatsApp</a></li>
+                <li><a href="{% url 'crm_marketing:pipeline_board' %}">Pipeline de Ventas <span class="label label-info pull-right">CRM</span></a></li>
+            </ul>
+        </li>
+
+
+
+        <li class="list-divider"></li>
         <li class="list-header">Configuración</li>
 
         <li>

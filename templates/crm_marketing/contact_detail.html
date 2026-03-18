@@ -1,0 +1,77 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}Perfil de Contacto | Hola Enfermera{% endblock %}
+
+{% block page_title %}Perfil CRM: {{ contacto.nombres }} {{ contacto.apellidos }}{% endblock %}
+
+{% block breadcrumb %}
+    <li>CRM y Marketing</li>
+    <li><a href="{% url 'crm_marketing:contact_list' %}">Contactos</a></li>
+    <li class="active">Perfil</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <div class="panel">
+            <div class="panel-body text-center">
+                <img alt="Profile Picture" class="img-md img-circle mar-btm" src="https://ui-avatars.com/api/?name={{contacto.nombres}}+{{contacto.apellidos}}&background=random">
+                <p class="text-lg text-semibold mar-no text-main">{{ contacto.nombres }} {{ contacto.apellidos }}</p>
+                <p class="text-muted">{{ contacto.telefono }}</p>
+
+                <div class="pad-ver text-center">
+                    <a href="https://wa.me/{{ contacto.telefono|slice:'1:' }}" target="_blank" class="btn btn-success"><i class="fab fa-whatsapp"></i> Enviar WP Manual</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Información Principal</h3>
+            </div>
+            <div class="panel-body">
+                <ul class="list-group list-group-striped">
+                    <li class="list-group-item"><strong>Cédula:</strong> {{ contacto.cedula|default:"No registrada" }}</li>
+                    <li class="list-group-item"><strong>Nacimiento:</strong> {{ contacto.fecha_nacimiento|default:"No registrada" }} {% if contacto.es_edad_estimada %}<small class="text-muted">(Edad Estimada)</small>{% endif %}</li>
+                    <li class="list-group-item"><strong>Email:</strong> {{ contacto.email|default:"No registrado" }}</li>
+                    <li class="list-group-item"><strong>Ciudad:</strong> {{ contacto.ciudad.nombre|default:"-" }}</li>
+                    <li class="list-group-item"><strong>Zona:</strong> {{ contacto.zona_barrio|default:"-" }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Historial de Productos de Farmacia (Data Excel)</h3>
+            </div>
+            <div class="panel-body">
+                <div class="alert alert-info">
+                    <strong>Origen:</strong> Ingresado desde <b>{{ contacto.farmacia_origen.nombre|default:"Origen Desconocido" }}</b> en fecha {{ contacto.fecha_registro|date:"d/m/Y" }}.
+                </div>
+
+                <p class="text-bold">Medicamentos Adquiridos:</p>
+                {% for producto in contacto.medicamentos_comprados.all %}
+                    <span class="label label-primary text-md mar-rgt">{{ producto.nombre }}</span>
+                {% empty %}
+                    <p class="text-muted">No tiene asociaciones de productos registrados.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Segmentación (Etiquetas)</h3>
+            </div>
+            <div class="panel-body">
+                {% for etiqueta in contacto.etiquetas.all %}
+                    <span class="badge text-md mar-rgt" style="background-color: {{ etiqueta.color }}">{{ etiqueta.nombre }}</span>
+                {% empty %}
+                    <p class="text-muted">Este contacto no tiene etiquetas de segmentación aún.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

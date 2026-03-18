@@ -1,0 +1,64 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}Importar Contactos | Hola Enfermera{% endblock %}
+
+{% block page_title %}Importador de Base de Datos de Farmacias{% endblock %}
+
+{% block breadcrumb %}
+    <li>CRM y Marketing</li>
+    <li><a href="{% url 'crm_marketing:contact_list' %}">Contactos</a></li>
+    <li class="active">Importar</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 col-lg-offset-2">
+
+
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title"><i class="demo-pli-file-excel"></i> Subir Archivo Base de Datos</h3>
+            </div>
+            
+            <form method="POST" enctype="multipart/form-data" class="panel-body">
+                {% csrf_token %}
+                
+                <div class="row mar-btm pad-btm">
+                    <div class="col-sm-12 text-right">
+                        <a href="{% url 'crm_marketing:download_import_template' %}" class="btn btn-success"><i class="demo-pli-download-from-cloud"></i> Descargar Plantilla Excel de Ejemplo</a>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>¡Importante! Estructura del Archivo:</strong>
+                    El archivo Excel (<code>.xlsx</code> o <code>.xls</code>) debe contener la columna <b>TELEFONO</b>.
+                    <br><br>
+                    Columnas recomendadas (respeta el nombre de la cabecera):
+                    <ul>
+                        <li><b class="text-danger">CEDULA</b> (Identificador principal. Si tienes varios clientes con el mismo teléfono, la cédula evitará que se sobrescriban)</li>
+                        <li><b>NOMBRES</b></li>
+                        <li><b>APELLIDOS</b></li>
+                        <li><b>EMAIL</b> (Correo electrónico del cliente)</li>
+                        <li><b>DIRECCION</b> (Zona, barrio o referencia de entrega)</li>
+                        <li><b>FECHA_NACIMIENTO</b> (Formato AAAA-MM-DD o Fecha de Excel)</li>
+                        <li><b>EDAD</b> (Si no se tiene la fecha exacta, usa esto para que el sistema la calcule)</li>
+                        <li><b>CIUDAD</b></li>
+                        <li><b>CODIGO_FARMACIA</b> (Para asociarle la farmacia de origen)</li>
+                        <li><b>MEDICAMENTO</b> (El producto comprado)</li>
+                    </ul>
+                </div>
+
+                <div class="form-group mar-btm">
+                    <label class="control-label text-semibold">Seleccionar Archivo Excel:</label>
+                    <input type="file" name="excel_file" class="form-control" accept=".xlsx, .xls, .csv" required>
+                </div>
+
+                <div class="text-right">
+                    <a href="{% url 'crm_marketing:contact_list' %}" class="btn btn-default">Cancelar</a>
+                    <button class="btn btn-primary" type="submit">Procesar Archivo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

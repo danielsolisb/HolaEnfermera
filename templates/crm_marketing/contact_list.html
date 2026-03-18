@@ -1,0 +1,303 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Contactos CRM | Hola Enfermera{% endblock %}
+
+{% block page_title %}Base de Clientes CRM{% endblock %}
+
+{% block breadcrumb %}
+    <li>CRM y Marketing</li>
+    <li class="active">Contactos</li>
+{% endblock %}
+
+{% block extra_css %}
+    <!-- DataTables -->
+    <link href="{% static 'plugins/datatables/media/css/dataTables.bootstrap.css' %}" rel="stylesheet">
+    <link href="{% static 'plugins/datatables/extensions/Responsive/css/responsive.dataTables.min.css' %}" rel="stylesheet">
+    <!-- Select2 -->
+    <link href="{% static 'plugins/select2/css/select2.min.css' %}" rel="stylesheet">
+    <style>
+        .select2-container { width: 100% !important; }
+        .table-checkbox { width: 40px; text-align: center; }
+        .bulk-actions-container {
+            display: none;
+            background: #f1f7fe;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            border-left: 5px solid #3498db;
+            border-radius: 4px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-sm-12 text-right pad-btm">
+        <a href="{% url 'crm_marketing:import_data' %}" class="btn btn-success"><i class="demo-pli-upload-to-cloud"></i> Importar Excel</a>
+    </div>
+
+    <div class="col-sm-12">
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Lista de Prospectos / Contactos</h3>
+            </div>
+            
+            <div class="panel-body">
+                <!-- Filtros Simples -->
+                <!-- Filtros Ampliados -->
+                <form method="GET" class="pad-btm bg-gray-light pad-all rounded mar-btm">
+                    <div class="row mar-btm">
+                        <div class="col-sm-3">
+                            <label class="control-label text-sm text-bold">Ciudad:</label>
+                            <select name="ciudad" class="form-control select2-multiple" multiple data-placeholder="Filtrar por ciudades...">
+                                {% for c in ciudades %}
+                                    <option value="{{ c.id }}" {% if c.id|stringformat:"s" in request.GET.getlist.ciudad %}selected{% endif %}>{{ c.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="control-label text-sm text-bold">Farmacia:</label>
+                            <select name="farmacia" class="form-control select2-multiple" multiple data-placeholder="Filtrar por farmacias...">
+                                {% for f in farmacias %}
+                                    <option value="{{ f.id }}" {% if f.id|stringformat:"s" in request.GET.getlist.farmacia %}selected{% endif %}>{{ f.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="control-label text-sm text-bold">Compró Producto:</label>
+                            <select name="medicamento" class="form-control select2-multiple" multiple data-placeholder="Filtrar por productos...">
+                                {% for p in productos %}
+                                    <option value="{{ p.id }}" {% if p.id|stringformat:"s" in request.GET.getlist.medicamento %}selected{% endif %}>{{ p.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="control-label text-sm text-bold">Etiqueta Especial:</label>
+                            <select name="etiqueta" class="form-control select2-multiple" multiple data-placeholder="Filtrar por etiquetas...">
+                                {% for e in etiquetas %}
+                                    <option value="{{ e.id }}" {% if e.id|stringformat:"s" in request.GET.getlist.etiqueta %}selected{% endif %}>{{ e.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-sm-4 form-inline">
+                            <label class="control-label text-sm text-bold mar-rgt">Edad (Años):</label>
+                            <input type="number" name="edad_min" class="form-control" placeholder="Min" style="width: 80px;" value="{{ request.GET.edad_min }}">
+                            <span> - </span>
+                            <input type="number" name="edad_max" class="form-control" placeholder="Max" style="width: 80px;" value="{{ request.GET.edad_max }}">
+                        </div>
+                        <div class="col-sm-8 text-right">
+                            <button class="btn btn-primary" type="submit"><i class="demo-pli-magnifi-glass"></i> Filtrar Resultados</button>
+                            <a href="{% url 'crm_marketing:contact_list' %}" class="btn btn-default mar-lft mar-rgt">Limpiar</a>
+                            
+                            <button type="button" class="btn btn-purple" data-toggle="modal" data-target="#bulkTagModal">
+                                <i class="demo-pli-tag"></i> Etiquetar a Resultados
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Barra de Acciones Masivas (se activa al seleccionar checkboxes) -->
+                <div id="bulk-actions-bar" class="bulk-actions-container mar-btm">
+                    <span id="selected-count" class="text-bold">0</span> contactos seleccionados.
+                    <button type="button" class="btn btn-sm btn-purple mar-lft" onclick="prepareBulkModal()">
+                        <i class="fa fa-tag"></i> Etiquetar Selección
+                    </button>
+                    <button type="button" class="btn btn-sm btn-default mar-lft" onclick="unselectAll()">Desmarcar todos</button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered dt-responsive" cellspacing="0" width="100%" id="demo-dt-basic">
+                        <thead>
+                            <tr>
+                                <th class="table-checkbox no-sort text-center">
+                                    <input type="checkbox" id="select-all-contacts">
+                                </th>
+                                <th>Nombre Completo</th>
+                                <th>Teléfono (WA)</th>
+                                <th>Ciudad</th>
+                                <th>Origen</th>
+                                <th>Medicamentos Comprados</th>
+                                <th>Etiquetas</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contacto in contactos %}
+                            <tr data-id="{{ contacto.id }}">
+                                <td class="text-center">
+                                    <input type="checkbox" class="contact-checkbox" value="{{ contacto.id }}">
+                                </td>
+                                <td>{{ contacto.nombres }} {{ contacto.apellidos }}</td>
+                                <td>{{ contacto.telefono }}</td>
+                                <td>{{ contacto.ciudad.nombre|default:"-" }}</td>
+                                <td>{{ contacto.farmacia_origen.nombre|default:"-" }}</td>
+                                <td>
+                                    {% for med in contacto.medicamentos_comprados.all %}
+                                        <span class="label label-info">{{ med.nombre }}</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% for etiqueta in contacto.etiquetas.all %}
+                                        <span class="badge" style="background-color: {{ etiqueta.color }}">{{ etiqueta.nombre }}</span>
+                                    {% endfor %}
+                                </td>
+                                <td class="text-center">
+                                    <a href="{% url 'crm_marketing:contact_detail' contacto.id %}" class="btn btn-xs btn-default" title="Ver"><i class="fa fa-eye"></i></a>
+                                    <a href="{% url 'crm_marketing:contact_edit' contacto.id %}" class="btn btn-xs btn-primary" title="Editar"><i class="fa fa-pencil"></i></a>
+                                    <button class="btn btn-xs btn-danger btn-delete-contact" 
+                                            data-id="{{ contacto.id }}" 
+                                            data-nombre="{{ contacto.nombres|escapejs }} {{ contacto.apellidos|escapejs }}" 
+                                            title="Eliminar">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No hay contactos registrados o que coincidan con la búsqueda.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Acciones Masivas: Asignar Etiqueta -->
+<div class="modal fade" id="bulkTagModal" tabindex="-1" role="dialog" aria-labelledby="bulkTagModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkTagModalLabel"><i class="demo-pli-tag"></i> Asignación Masiva de Etiquetas</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{% url 'crm_marketing:bulk_add_tag' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p id="bulkModalText">Se asignará la etiqueta a todos los contactos resultantes del filtro actual en pantalla. ¿Qué etiqueta deseas aplicar?</p>
+                    
+                    <!-- Contenedor dinámico de IDs para selección específica -->
+                    <div id="selected-ids-container"></div>
+
+                    <!-- Ocultamos los filtros activos en el submit -->
+                    {% for cid in request.GET.getlist.ciudad %}<input type="hidden" name="ciudad" value="{{ cid }}">{% endfor %}
+                    {% for fid in request.GET.getlist.farmacia %}<input type="hidden" name="farmacia" value="{{ fid }}">{% endfor %}
+                    {% for mid in request.GET.getlist.medicamento %}<input type="hidden" name="medicamento" value="{{ mid }}">{% endfor %}
+                    {% for eid in request.GET.getlist.etiqueta %}<input type="hidden" name="etiqueta" value="{{ eid }}">{% endfor %}
+                    <input type="hidden" name="edad_min" value="{{ request.GET.edad_min|default:'' }}">
+                    <input type="hidden" name="edad_max" value="{{ request.GET.edad_max|default:'' }}">
+
+                    <div class="form-group">
+                        <label class="control-label">Elige la etiqueta CRM</label>
+                        <!-- Usamos el context generico de Etiquetas, deberíamos proveer un context general desde context processor o mandarlo si lo tenemos -->
+                        <select name="etiqueta_id" class="form-control" required>
+                            <option value="">Selecciona Etiqueta...</option>
+                            <!-- Como no pasamos 'etiquetas' en get_context_data original del list, lo pasaremos ahora -->
+                            {% for e in etiquetas %}
+                                <option value="{{ e.id }}">{{ e.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <p class="text-xs text-muted">Aviso: Si no ves la etiqueta deseada, deberás crearla previamente desde el panel de Administración de Etiquetas.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-purple">Confirmar Asignación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Formulario oculto para eliminación -->
+    <form id="delete-contact-form" method="POST" style="display:none;">
+        {% csrf_token %}
+    </form>
+
+    <script src="{% static 'plugins/datatables/media/js/jquery.dataTables.js' %}"></script>
+    <script src="{% static 'plugins/datatables/media/js/dataTables.bootstrap.js' %}"></script>
+    <script src="{% static 'plugins/datatables/extensions/Responsive/js/dataTables.responsive.min.js' %}"></script>
+    <!-- Select2 -->
+    <script src="{% static 'plugins/select2/js/select2.min.js' %}"></script>
+    
+    
+    <script>
+        $(document).ready(function() {
+            // Manejador de eliminación
+            $(document).on('click', '.btn-delete-contact', function() {
+                const id = $(this).data('id');
+                const nombre = $(this).data('nombre');
+                if (confirm('¿Estás seguro de que deseas eliminar permanentemente a "' + nombre + '"? Esta acción borrará también todo su historial de chat.')) {
+                    // Usamos el formulario oculto que moveremos aquí también
+                    $('#delete-contact-form').attr('action', '/crm/contactos/' + id + '/eliminar/');
+                    $('#delete-contact-form').submit();
+                }
+            });
+
+            // Inicializar DataTables
+            var table = $('#demo-dt-basic').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
+                },
+                "responsive": true,
+                "order": [],
+                "columnDefs": [
+                    { "orderable": false, "targets": 0 }
+                ]
+            });
+
+            // Inicializar Select2
+            $('.select2-multiple').select2();
+
+            // Lógica de "Seleccionar Todos"
+            $('#select-all-contacts').on('change', function() {
+                $('.contact-checkbox').prop('checked', this.checked);
+                updateBulkBar();
+            });
+
+            $(document).on('change', '.contact-checkbox', function() {
+                updateBulkBar();
+            });
+        });
+
+        function updateBulkBar() {
+            var selectedLength = $('.contact-checkbox:checked').length;
+            if (selectedLength > 0) {
+                $('#selected-count').text(selectedLength);
+                $('#bulk-actions-bar').fadeIn();
+            } else {
+                $('#bulk-actions-bar').fadeOut();
+            }
+        }
+
+        function unselectAll() {
+            $('.contact-checkbox, #select-all-contacts').prop('checked', false);
+            updateBulkBar();
+        }
+
+        function prepareBulkModal() {
+            var selectedIds = [];
+            $('.contact-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+
+            $('#selected-ids-container').empty();
+            selectedIds.forEach(function(id) {
+                $('#selected-ids-container').append('<input type="hidden" name="contact_ids" value="' + id + '">');
+            });
+
+            $('#bulkModalText').text('Has seleccionado ' + selectedIds.length + ' contactos específicos. ¿Qué etiqueta deseas aplicarles?');
+            $('#bulkTagModal').modal('show');
+        }
+    </script>
+{% endblock %}

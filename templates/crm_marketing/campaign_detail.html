@@ -1,0 +1,143 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Detalle Campaña | {{ campana.nombre }}{% endblock %}
+
+{% block page_title %}Análisis de Audiencia Objetivo{% endblock %}
+
+{% block breadcrumb %}
+    <li>CRM y Marketing</li>
+    <li><a href="{% url 'crm_marketing:campaign_list' %}">Campañas</a></li>
+    <li class="active">Detalle Segmento</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+
+    <!-- Tarjeta Principal: Estado de Campaña -->
+    <div class="col-lg-4">
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Ficha Técnica</h3>
+            </div>
+            <div class="panel-body">
+                <h4 class="text-main">{{ campana.nombre }}</h4>
+                <hr>
+                <div class="list-group list-group-striped mar-btm">
+                    <div class="list-group-item">
+                        <strong>Estado Actual:</strong>
+                        <span class="label pull-right {% if campana.estado == 'BORRADOR' %}label-default{% else %}label-success{% endif %}">
+                            {{ campana.estado }}
+                        </span>
+                    </div>
+                    <div class="list-group-item">
+                        <strong>Fecha Programada:</strong>
+                        <span class="pull-right">{{ campana.fecha_programada|date:"d M Y H:i"|default:"Inmediato / Manual" }}</span>
+                    </div>
+                </div>
+
+                <div class="bg-gray-light pad-all img-rounded">
+                    <p class="text-bold"><i class="fab fa-whatsapp text-success"></i> Plantilla Creada:</p>
+                    <p style="white-space: pre-wrap;" class="text-sm"><i>"{{ campana.mensaje_plantilla }}"</i></p>
+                </div>
+
+                <div class="pad-ver text-center mar-top">
+                    {% if campana.estado == 'BORRADOR' %}
+                        <button class="btn btn-block btn-success btn-lg" onclick="alert('Funcionalidad de disparo masivo WASender en desarrollo...')">
+                            <i class="fa fa-paper-plane mar-rgt"></i> ENVIAR A {{ audiencia_total }} PERSONAS
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna Derecha: Resultado del Cruce -->
+    <div class="col-lg-8">
+        
+        <div class="row">
+            <div class="col-sm-4">
+                <div class="panel panel-info panel-colorful mar-btm">
+                    <div class="pad-all text-center">
+                        <span class="text-3x text-thin">{{ audiencia_total }}</span>
+                        <p>Total de Receptores (Leads)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-8">
+                <div class="panel pad-all">
+                    <p class="text-bold mar-no">Filtros Activos (AND):</p>
+                    <ul class="list-inline mar-top">
+                        <!-- Edades -->
+                        {% if campana.edad_minima or campana.edad_maxima %}
+                            <li class="mar-btm"><span class="label label-dark"><i class="fa fa-birthday-cake mar-rgt"></i> 
+                                {% if campana.edad_minima %}Min: {{campana.edad_minima}} años{% endif %}
+                                {% if campana.edad_minima and campana.edad_maxima %} - {% endif %}
+                                {% if campana.edad_maxima %}Max: {{campana.edad_maxima}} años{% endif %}
+                            </span></li>
+                        {% endif %}
+                        
+                        <!-- Productos -->
+                        {% for med in campana.medicamentos_objetivo.all %}
+                            <li class="mar-btm"><span class="label label-primary"><i class="fa fa-medkit mar-rgt"></i> Cmp: {{ med.nombre }}</span></li>
+                        {% endfor %}
+
+                        <!-- Ciudades / Farmacias -->
+                        {% for c in campana.ciudades_objetivo.all %}
+                            <li class="mar-btm"><span class="label label-info"><i class="fa fa-map-marker mar-rgt"></i> {{ c.nombre }}</span></li>
+                        {% endfor %}
+                        
+                        {% for f in campana.farmacias_objetivo.all %}
+                            <li class="mar-btm"><span class="label label-warning"><i class="fa fa-building mar-rgt"></i> {{ f.nombre }}</span></li>
+                        {% endfor %}
+
+                        {% if not campana.edad_minima and not campana.edad_maxima and not campana.medicamentos_objetivo.count and not campana.ciudades_objetivo.count and not campana.farmacias_objetivo.count and not campana.etiquetas_objetivo.count %}
+                            <li><span class="label label-danger">Sin filtros (Envío Masivo Absoluto)</span></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Muestra de Audiencia (Top 50 Leads)</h3>
+            </div>
+            <div class="panel-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nombre Completo</th>
+                                <th>Teléfono (WhatsApp)</th>
+                                <th>Edad / Nacimiento</th>
+                                <th>Farmacia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for crm_contact in contactos_preview %}
+                            <tr>
+                                <td>{{ crm_contact.nombres }} {{ crm_contact.apellidos }}</td>
+                                <td>{{ crm_contact.telefono }}</td>
+                                <td>
+                                    {{ crm_contact.fecha_nacimiento|date:"Y-m-d"|default:"-" }}
+                                    {% if crm_contact.es_edad_estimada and crm_contact.fecha_nacimiento %}
+                                        <small class="text-muted">(Estimada)</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ crm_contact.farmacia_origen.nombre|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Ningún prospecto en tu base de datos coincide con estos filtros.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

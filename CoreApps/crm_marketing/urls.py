@@ -1,0 +1,33 @@
+from django.urls import path
+from . import views
+
+app_name = 'crm_marketing'
+
+urlpatterns = [
+    path('contactos/', views.CrmContactListView.as_view(), name='contact_list'),
+    path('contactos/<int:pk>/', views.CrmContactDetailView.as_view(), name='contact_detail'),
+    path('contactos/<int:pk>/editar/', views.CrmContactUpdateView.as_view(), name='contact_edit'),
+    path('contactos/bulk-tag/', views.AssignTagsBulkView.as_view(), name='bulk_add_tag'),
+    path('contactos/importar/', views.ContactImportView.as_view(), name='import_data'),
+    path('contactos/importar/plantilla/', views.DownloadImportTemplateView.as_view(), name='download_import_template'),
+    
+
+    # Campañas
+    path('campanas/', views.CampanaListView.as_view(), name='campaign_list'),
+    path('campanas/crear/', views.CampanaCreateView.as_view(), name='campaign_create'),
+    path('campanas/<int:pk>/editar/', views.CampanaUpdateView.as_view(), name='campaign_edit'),
+    path('campanas/<int:pk>/preview/', views.CampaignPreviewView.as_view(), name='campaign_preview'),
+    path('campanas/<int:pk>/execute/', views.CampaignExecuteView.as_view(), name='campaign_execute'),
+    path('campanas/<int:pk>/reporte/', views.CampaignReportView.as_view(), name='campaign_report'),
+    
+    # Etiquetas
+    path('etiquetas/', views.EtiquetaListView.as_view(), name='etiqueta_list'),
+    path('etiquetas/crear/', views.EtiquetaCreateView.as_view(), name='etiqueta_create'),
+    path('etiquetas/<int:pk>/editar/', views.EtiquetaUpdateView.as_view(), name='etiqueta_edit'),
+    path('etiquetas/<int:pk>/eliminar/', views.EtiquetaDeleteView.as_view(), name='etiqueta_delete'),
+    
+    # Pipeline / Kanban
+    path('pipeline/', views.PipelineBoardView.as_view(), name='pipeline_board'),
+    path('pipeline/update-stage/', views.UpdateContactStageAPIView.as_view(), name='api_update_stage'),
+    path('contactos/<int:pk>/eliminar/', views.CrmContactDeleteView.as_view(), name='contact_delete'),
+]

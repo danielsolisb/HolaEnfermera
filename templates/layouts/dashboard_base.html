@@ -23,6 +23,90 @@
     <link href="{% static 'css/dashboard.css' %}" rel="stylesheet">
 
     {% block extra_css %}{% endblock %}
+    <style>
+        /* Sistema de Toasts Hola Enfermera */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .hn-toast {
+            min-width: 300px;
+            max-width: 400px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: toast-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            pointer-events: auto;
+            border-left: 6px solid #ccc;
+            position: relative;
+        }
+
+        @keyframes toast-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .hn-toast.fade-out {
+            animation: toast-out 0.3s ease forwards;
+        }
+
+        @keyframes toast-out {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        .hn-toast-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hn-toast-icon {
+            font-size: 20px;
+        }
+
+        .hn-toast-body {
+            font-size: 14px;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .hn-toast-close {
+            background: none;
+            border: none;
+            color: #adb5bd;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 5px;
+            transition: color 0.2s;
+        }
+
+        .hn-toast-close:hover { color: #495057; }
+
+        /* Variantes de Color */
+        .hn-toast-success { border-left-color: #2ecc71; background-color: #f0fff4; }
+        .hn-toast-success .hn-toast-icon { color: #2ecc71; }
+        
+        .hn-toast-error { border-left-color: #e74c3c; background-color: #fff5f5; }
+        .hn-toast-error .hn-toast-icon { color: #e74c3c; }
+
+        .hn-toast-warning { border-left-color: #f1c40f; background-color: #fffdf0; }
+        .hn-toast-warning .hn-toast-icon { color: #f1c40f; }
+
+        .hn-toast-info { border-left-color: #3498db; background-color: #f0f7ff; }
+        .hn-toast-info .hn-toast-icon { color: #3498db; }
+    </style>
 </head>
 
 <body>
@@ -63,5 +147,63 @@
     <script src="{% static 'plugins/pace/pace.min.js' %}"></script>
 
     {% block extra_js %}{% endblock %}
+
+    <!-- Contenedor de Toasts -->
+    <div id="toast-container"></div>
+
+    <script>
+        /**
+         * Función Global para mostrar Toasts elegantes
+         * @param {string} message - Texto de la notificación
+         * @param {string} type - 'success', 'error', 'warning', 'info'
+         */
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `hn-toast hn-toast-${type}`;
+            
+            const icons = {
+                'success': 'fa-circle-check',
+                'error': 'fa-circle-xmark',
+                'warning': 'fa-triangle-exclamation',
+                'info': 'fa-circle-info'
+            };
+
+            toast.innerHTML = `
+                <div class="hn-toast-content">
+                    <i class="fa-solid ${icons[type]} hn-toast-icon"></i>
+                    <div class="hn-toast-body">${message}</div>
+                </div>
+                <button class="hn-toast-close" onclick="this.parentElement.classList.add('fade-out'); setTimeout(() => this.parentElement.remove(), 300);">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            // Auto-cerrar después de 6 segundos
+            setTimeout(() => {
+                if(toast.parentElement) {
+                    toast.classList.add('fade-out');
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 6000);
+        }
+
+        // Convertir automáticamente mensajes Flash de Django a Toasts al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if messages %}
+                {% for message in messages %}
+                    let msgType = 'info';
+                    {% if message.tags == 'success' %} msgType = 'success';
+                    {% elif message.tags == 'error' or message.tags == 'danger' %} msgType = 'error';
+                    {% elif message.tags == 'warning' %} msgType = 'warning';
+                    {% endif %}
+                    
+                    showToast("{{ message|escapejs }}", msgType);
+                {% endfor %}
+            {% endif %}
+        });
+    </script>
 </body>
 </html>

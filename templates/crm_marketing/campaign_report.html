@@ -1,0 +1,104 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Reporte de Campaña | Hola Enfermera{% endblock %}
+
+{% block page_title %}Reporte de Rendimiento{% endblock %}
+
+{% block breadcrumb %}
+    <li>CRM y Marketing</li>
+    <li><a href="{% url 'crm_marketing:campaign_list' %}">Campañas</a></li>
+    <li class="active">Reporte</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="panel panel-bordered panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">Resumen de Campaña</h3>
+            </div>
+            <div class="panel-body">
+                <p><strong>Campaña:</strong> {{ campana.nombre }}</p>
+                <p><strong>Estado Global:</strong> <span class="label label-primary">{{ campana.estado }}</span></p>
+                <p><strong>Total en Cola:</strong> {{ total }} contactos</p>
+                <p><strong>Fecha Programada:</strong> {{ campana.fecha_programada|date:"d/m/Y H:i"|default:"Inmediato" }}</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Estadísticas de Entrega</h3>
+            </div>
+            <div class="panel-body">
+                <ul class="list-group">
+                    <li class="list-group-item">
+                        <span class="badge badge-success">{{ leidos }}</span>
+                        Leídos (DOBLE CHECK ✅)
+                    </li>
+                    <li class="list-group-item">
+                        <span class="badge badge-info">{{ enviados }}</span>
+                        Enviados (Sin leer)
+                    </li>
+                    <li class="list-group-item">
+                        <span class="badge badge-warning">{{ pendientes }}</span>
+                        Pendientes en Cola
+                    </li>
+                    <li class="list-group-item">
+                        <span class="badge badge-danger">{{ errores }}</span>
+                        Errores de Envío
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Trazabilidad por Contacto</h3>
+            </div>
+            <div class="panel-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Ciudad</th>
+                                <th>Estado</th>
+                                <th>Actualización</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for msj in mensajes %}
+                            <tr>
+                                <td>{{ msj.contacto.nombres }} {{ msj.contacto.apellidos }}</td>
+                                <td>{{ msj.contacto.telefono }}</td>
+                                <td>{{ msj.contacto.ciudad.nombre|default:"N/A" }}</td>
+                                <td>
+                                    {% if msj.estado == 'PENDIENTE' %}
+                                        <span class="label label-warning">PENDIENTE</span>
+                                    {% elif msj.estado == 'ENVIADO' %}
+                                        <span class="label label-info">ENVIADO</span>
+                                    {% elif msj.estado == 'LEIDO' %}
+                                        <span class="label label-success">LEIDO ✅</span>
+                                    {% elif msj.estado == 'ERROR' %}
+                                        <span class="label label-danger" title="{{ msj.error_log }}">ERROR ❌</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ msj.fecha_actualizacion|date:"d M, H:i:s" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">No hay registros de envío para esta campaña. (Aún no se ha lanzado)</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

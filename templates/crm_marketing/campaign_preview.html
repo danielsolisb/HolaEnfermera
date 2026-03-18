@@ -1,0 +1,86 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Previsualizar Campaña | Hola Enfermera{% endblock %}
+
+{% block page_title %}Previsualización de Audiencia{% endblock %}
+
+{% block breadcrumb %}
+    <li>CRM y Marketing</li>
+    <li><a href="{% url 'crm_marketing:campaign_list' %}">Campañas</a></li>
+    <li class="active">Preview</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <h3 class="panel-title">Resumen de Campaña</h3>
+            </div>
+            <div class="panel-body">
+                <p><strong>Campaña:</strong> {{ campana.nombre }}</p>
+                <p><strong>Estado:</strong> <span class="label label-default">{{ campana.estado }}</span></p>
+                <p><strong>Total de Audiencia:</strong> <span class="badge badge-success">{{ audiencia_total }} contactos</span></p>
+                <p><strong>Fecha Programada:</strong> {{ campana.fecha_programada|date:"d/m/Y H:i"|default:"Inmediato (En Cola)" }}</p>
+                <hr>
+                <p><strong>Mensaje que se enviará:</strong></p>
+                <div class="well well-sm" style="white-space: pre-wrap;">{{ campana.mensaje_plantilla }}</div>
+                
+                <p class="text-muted text-sm"><i class="fa fa-info-circle"></i> Las variables `{nombres}` o `{medicamentos}` serán reemplazadas individualmente para cada cliente al momento del envío.</p>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-body text-center">
+                {% if audiencia_total > 0 %}
+                <form method="POST" action="{% url 'crm_marketing:campaign_execute' campana.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-lg btn-block"><i class="fa fa-rocket"></i> Confirmar y Enviar a Cola</button>
+                    <a href="{% url 'crm_marketing:campaign_list' %}" class="btn btn-default btn-block mar-top">Regresar</a>
+                </form>
+                {% else %}
+                <div class="alert alert-danger">
+                    No hay contactos que coincidan con los filtros. La campaña no se puede lanzar.
+                </div>
+                <a href="{% url 'crm_marketing:campaign_list' %}" class="btn btn-default btn-block mar-top">Regresar</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Muestra de Audiencia (Top 50)</h3>
+            </div>
+            <div class="panel-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Ciudad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in contactos_preview %}
+                            <tr>
+                                <td>{{ c.nombres }} {{ c.apellidos }}</td>
+                                <td>{{ c.telefono }}</td>
+                                <td>{{ c.ciudad.nombre|default:"N/A" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">No hay contactos.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

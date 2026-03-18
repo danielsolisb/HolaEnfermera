@@ -135,7 +135,7 @@ class WASenderService:
             # Verificación de éxito según tu utils
             if response.status_code in [200, 201] and response_data.get('success') is True:
                 logger.info(f"WASender: Mensaje enviado a {formatted_number}")
-                return True
+                return response_data # Devolvemos todo el dict para sacar el message ID
             else:
                 logger.error(f"WASender Falló: {response.text}")
                 return False

@@ -1,0 +1,37 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}Eliminar Etiqueta | Hola Enfermera{% endblock %}
+
+{% block page_title %}Eliminar Etiqueta CRM{% endblock %}
+
+{% block breadcrumb %}
+    <li>CRM y Marketing</li>
+    <li><a href="{% url 'crm_marketing:etiqueta_list' %}">Etiquetas</a></li>
+    <li class="active">Eliminar</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 col-lg-offset-3">
+        <div class="panel panel-danger">
+            <div class="panel-heading">
+                <h3 class="panel-title"><i class="fa fa-exclamation-triangle"></i> ATENCIÓN: Eliminar Etiqueta</h3>
+            </div>
+            
+            <form method="POST" class="panel-body">
+                {% csrf_token %}
+                
+                <h4 class="text-danger">¿Estás completamente seguro de que quieres eliminar la etiqueta "{{ object.nombre }}"?</h4>
+                <div class="alert alert-warning mar-all">
+                    Si eliminas esta etiqueta, desaparecerá de la visualización de todos los clientes de CRM que la tengan actualmente asignada.
+                </div>
+
+                <div class="text-right mar-top">
+                    <a href="{% url 'crm_marketing:etiqueta_list' %}" class="btn btn-default">Cancelar</a>
+                    <button class="btn btn-danger" type="submit">Sí, Eliminar de todas formas</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

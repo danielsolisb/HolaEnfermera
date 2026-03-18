@@ -1,3 +1,8 @@
 from django.contrib import admin
+from .models import Ciudad
 
-# Register your models here.
+@admin.register(Ciudad)
+class CiudadAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'activa')
+    search_fields = ('nombre',)
+    list_filter = ('activa',)

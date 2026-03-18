@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'CoreApps.reports',
     'CoreApps.chat',
     'CoreApps.payments',
+    'CoreApps.crm_marketing',
 ]
 
 MIDDLEWARE = [

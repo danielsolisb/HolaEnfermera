@@ -1,0 +1,86 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Campañas de Medios | Hola Enfermera{% endblock %}
+
+{% block page_title %}Difusiones Massivas (WhatsApp){% endblock %}
+
+{% block breadcrumb %}
+    <li>CRM y Marketing</li>
+    <li class="active">Campañas</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-sm-12 text-right pad-btm">
+        <a href="{% url 'crm_marketing:campaign_create' %}" class="btn btn-primary"><i class="demo-pli-add"></i> Crear Nueva Campaña</a>
+    </div>
+
+    <div class="col-sm-12">
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Tus Campañas y Promociones</h3>
+            </div>
+            
+            <div class="panel-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nombre de la Campaña</th>
+                                <th>Estado</th>
+                                <th>Programada para</th>
+                                <th>Filtros Aplicados</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for campana in campanas %}
+                            <tr>
+                                <td><strong class="text-main">{{ campana.nombre }}</strong></td>
+                                <td>
+                                    {% if campana.estado == 'BORRADOR' %}
+                                        <span class="label label-default">{{ campana.estado }}</span>
+                                    {% elif campana.estado == 'COMPLETADA' %}
+                                        <span class="label label-success">{{ campana.estado }}</span>
+                                    {% elif campana.estado == 'ERROR' %}
+                                        <span class="label label-danger">{{ campana.estado }}</span>
+                                    {% else %}
+                                        <span class="label label-info">{{ campana.estado }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ campana.fecha_programada|date:"d/m/Y H:i"|default:"Sin Programar" }}</td>
+                                <td>
+                                    <small class="text-muted">
+                                        {% if campana.ciudades_objetivo.all or campana.farmacias_objetivo.all or campana.etiquetas_objetivo.all or campana.medicamentos_objetivo.all or campana.edad_minima %}
+                                            <i class="fa fa-filter"></i> Si tiene Segmentación
+                                        {% else %}
+                                            A toda la base (Masivo)
+                                        {% endif %}
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    {% if campana.estado == 'BORRADOR' %}
+                                        <a href="{% url 'crm_marketing:campaign_edit' campana.pk %}" class="btn btn-xs btn-warning"><i class="demo-pli-pen-5"></i> Editar</a>
+                                        <a href="{% url 'crm_marketing:campaign_preview' campana.pk %}" class="btn btn-xs btn-success"><i class="fa fa-paper-plane"></i> Lanzar / Preview</a>
+                                    {% endif %}
+                                    <a href="{% url 'crm_marketing:campaign_report' campana.pk %}" class="btn btn-xs btn-default"><i class="fa fa-bar-chart"></i> Reporte</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted pad-all" style="padding: 40px 0;">
+                                    <i class="demo-pli-data-settings icon-4x mar-btm d-block opacity-50"></i>
+                                    <h4>Aún no has creado tu primera campaña de WhatsApp.</h4>
+                                    <p>Empieza segmentando a tus leads de las farmacias.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

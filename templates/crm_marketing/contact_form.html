@@ -1,0 +1,141 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}{% if object %}Editar Contacto{% else %}Nuevo Contacto{% endif %} | Hola Enfermera{% endblock %}
+
+{% block page_title %}{% if object %}Editar Contacto CRM{% else %}Nuevo Contacto CRM{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+    <li>CRM y Marketing</li>
+    <li><a href="{% url 'crm_marketing:contact_list' %}">Contactos</a></li>
+    {% if object %}
+        <li><a href="{% url 'crm_marketing:contact_detail' object.id %}">{{ object.nombres }}</a></li>
+        <li class="active">Editar</li>
+    {% else %}
+        <li class="active">Nuevo</li>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 col-lg-offset-2">
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title"><i class="demo-pli-pen-5"></i> {% if object %}Actualizar Datos de Prospecto{% else %}Registrar Prospecto{% endif %}</h3>
+            </div>
+            
+            <form method="POST" class="panel-body">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label class="control-label">{{ form.nombres.label }}</label>
+                            {% render_field form.nombres class="form-control" %}
+                            {{ form.nombres.errors }}
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label class="control-label">{{ form.apellidos.label }}</label>
+                            {% render_field form.apellidos class="form-control" %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label class="control-label">{{ form.cedula.label }}</label>
+                            {% render_field form.cedula class="form-control" %}
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label class="control-label">{{ form.telefono.label }}</label>
+                            {% render_field form.telefono class="form-control" %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="form-group">
+                            <label class="control-label">{{ form.email.label }}</label>
+                            {% render_field form.email class="form-control" %}
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="new-section-xs">
+                
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label class="control-label">{{ form.fecha_nacimiento.label }}</label>
+                            {% render_field form.fecha_nacimiento class="form-control" type="date" %}
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <div class="checkbox pad-top">
+                                <label class="form-checkbox form-normal form-primary">
+                                    {% render_field form.es_edad_estimada %} {{ form.es_edad_estimada.label }}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="new-section-xs">
+
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label class="control-label">{{ form.ciudad.label }}</label>
+                            {% render_field form.ciudad class="form-control" %}
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label class="control-label">{{ form.zona_barrio.label }}</label>
+                            {% render_field form.zona_barrio class="form-control" %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="form-group">
+                            <label class="control-label">{{ form.farmacia_origen.label }}</label>
+                            {% render_field form.farmacia_origen class="form-control" %}
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="new-section-xs">
+                <p class="text-main text-bold">Segmentación de Marketing</p>
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label class="control-label">{{ form.medicamentos_comprados.label }}</label>
+                            {% render_field form.medicamentos_comprados class="form-control" %}
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label class="control-label">{{ form.etiquetas.label }}</label>
+                            {% render_field form.etiquetas class="form-control" %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-right mar-top">
+                    <a href="{% url 'crm_marketing:contact_list' %}" class="btn btn-default">Cancelar</a>
+                    <button class="btn btn-primary" type="submit">Guardar Contacto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
