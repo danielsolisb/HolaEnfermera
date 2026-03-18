@@ -194,16 +194,27 @@ class ContactImportView(GestorCrmMixin, FormView):
             for index, row in df.iterrows():
                 # Campos mandatorios: telefono ahora pasa a ser recomendado, pero cedula manda. 
                 # Sin embargo, exigiremos telefono porque es para WhatsApp
+                # --- CORRECCIÓN: Limpieza de Teléfono (Basura de Excel) ---
                 telefono = str(row.get('TELEFONO', '')).strip()
-                
+                if telefono.endswith('.0'): telefono = telefono[:-2]
+                # ---------------------------------------------------------
+
                 # Omitir si está vacío o si es uno de los números de ejemplo exactos de la plantilla
                 if not telefono or telefono == 'None' or telefono in ['0991234567', '0987654321']:
                     continue
                 
-                # Cédula como identificador principal (Si no hay cédula, usaremos el mismo teléfono como fallback para evitar fallos si el Excel viene sin cédulas)
+                # Cédula como identificador principal
                 cedula = str(row.get('CEDULA', '')).strip()
-                if not cedula or cedula == 'None':
-                    cedula = telefono # Fallback de identificación
+                if cedula.endswith('.0'): cedula = cedula[:-2] # Limpiar .0 de Excel
+
+                # --- CORRECCIÓN: Recuperar cero inicial perdido por Excel ---
+                if len(cedula) == 9 and cedula.isdigit():
+                    cedula = '0' + cedula
+
+                if not cedula or cedula == 'None' or cedula == '':
+                    # Si no hay cédula, intentamos usar el teléfono como fallback
+                    cedula = telefono 
+                # -----------------------------------------------------------
 
                 # Limpiador básico de teléfono a formato +593...
                 if telefono.startswith('09'):

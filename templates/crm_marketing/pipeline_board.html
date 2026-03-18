@@ -233,6 +233,14 @@
                     const newEtapa = evt.to.getAttribute('data-etapa');
                     
                     if (evt.from !== evt.to) {
+                        // --- DINÁMICO: Actualizar color del borde inmediatamente ---
+                        const card = $(evt.item);
+                        // Removemos todas las posibles clases de color
+                        card.removeClass('col-lead col-contactado col-negociacion col-ganado col-perdido');
+                        // Añadimos la nueva clase basada en la etapa
+                        card.addClass('col-' + newEtapa.toLowerCase());
+                        // ---------------------------------------------------------
+
                         updateLeadStage(contactId, newEtapa);
                         updateCounts();
                     }
