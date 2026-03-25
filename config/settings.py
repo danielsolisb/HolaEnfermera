@@ -30,9 +30,19 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+
+# Aseguramos el dominio de producción y ngrok
+PROD_DOMAIN = 'holaenfermera.ecuapulselab.com'
+NGROK_DOMAIN = 'b220-2800-440-1006-7700-c092-5b8d-2d48-b0.ngrok-free.app'
+
+if PROD_DOMAIN not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(PROD_DOMAIN)
+if NGROK_DOMAIN not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(NGROK_DOMAIN)
 CSRF_TRUSTED_ORIGINS = [
     'https://holaenfermera.ecuapulselab.com',
-    'http://127.0.0.1:8000',  # Para que te siga funcionando en local
+    'https://b220-2800-440-1006-7700-c092-5b8d-2d48-b0.ngrok-free.app',
+    'http://127.0.0.1:8000',
 ]
 #ALLOWED_HOSTS = []
 
@@ -188,10 +198,12 @@ GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
 #WAAPI_API_TOKEN = 'QBjqX9gQ7fm2VNfklpvXP345L4W0lV9Dcr7ZQB5ffc6ef363'
 
 # WASenderAPI Configuration
-#WASENDERAPI_API_KEY = os.getenv('WASENDERAPI_API_KEY')
-#WASENDERAPI_BASE_URL = os.getenv('WASENDERAPI_BASE_URL')
-print(f"WASenderAPI Key loaded: {WASENDERAPI_API_KEY is not None and len(WASENDERAPI_API_KEY) > 0}")
-print(f"WASenderAPI Base URL loaded: {WASENDERAPI_BASE_URL}")
+WASENDER_API_KEY = os.getenv('WASENDERAPI_API_KEY')
+WASENDER_BASE_URL = os.getenv('WASENDERAPI_BASE_URL', 'https://wasenderapi.com/api/')
+WASENDER_WEBHOOK_SECRET = os.getenv('WASENDER_WEBHOOK_SECRET')
+
+print(f"WASenderAPI Key loaded: {WASENDER_API_KEY is not None and len(WASENDER_API_KEY) > 0}")
+print(f"WASenderAPI Base URL loaded: {WASENDER_BASE_URL}")
 
 # Configuración de email
 

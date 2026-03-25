@@ -6,7 +6,15 @@
 {% block page_title %}Bandeja de Entrada en Vivo{% endblock %}
 
 {% block extra_css %}
+<!-- Leaflet para el Mapa Picker -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
 <style>
+    /* Ocultar breadcrumb para ganar espacio según solicitud del usuario */
+    #page-head .breadcrumb { display: none !important; }
+    #page-head { padding: 15px 20px 0 20px !important; min-height: auto !important; }
+
     .chat-container {
         height: calc(100vh - 250px);
         min-height: 500px;
@@ -59,12 +67,12 @@
     }
 
     .chat-header {
-        padding: 10px 20px;
+        padding: 12px 20px;
         border-bottom: 1px solid #e1e7ec;
         background: #fff;
         display: flex;
-        align-items: center;
-        min-height: 60px;
+        align-items: flex-start; /* Evita que el título se desplace verticalmente al cargar campañas */
+        min-height: 75px;
     }
 
     .chat-messages {
@@ -123,12 +131,107 @@
         display: inline-block;
     }
 
+    .chat-actions-sidebar {
+        width: 300px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid #e1e7ec;
+        background: #fff;
+        flex-shrink: 0;
+        transition: all 0.3s ease;
+    }
+    
+    .chat-actions-sidebar.collapsed {
+        width: 0;
+        overflow: hidden;
+        border-left: none;
+    }
+
+    .actions-section {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .actions-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #888;
+        margin-bottom: 15px;
+        display: block;
+        letter-spacing: 0.5px;
+    }
+
+    .quick-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .premium-action-btn {
+        text-align: left;
+        padding: 10px 12px;
+        border: 1px solid #ebf0f3;
+        background: #fdfdfd;
+        border-radius: 8px;
+        font-size: 13px;
+        transition: all 0.2s;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .premium-action-btn:hover {
+        background: #f0f7ff;
+        border-color: #00A6ED;
+        transform: translateX(3px);
+    }
+
+    .media-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .media-card {
+        background: #f9f9f9;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .media-card:hover {
+        border-color: #00A6ED;
+        transform: translateY(-2px);
+    }
+
+    .media-card i {
+        font-size: 24px;
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .media-card span {
+        font-size: 11px;
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     /* Desktop Responsive fix */
-    @media (max-width: 768px) {
-        .chat-sidebar { width: 100%; }
-        .chat-content-main { display: none; }
-        .chat-container.mobile-active .chat-sidebar { display: none; }
-        .chat-container.mobile-active .chat-content-main { display: flex; width: 100%; }
+    @media (max-width: 1200px) {
+        .chat-actions-sidebar { width: 250px; }
+    }
+    
+    @media (max-width: 992px) {
+        .chat-actions-sidebar { display: none; }
     }
 </style>
 {% endblock %}
@@ -164,18 +267,24 @@
                 <!-- Header de chat activo -->
                 <div class="chat-header" id="active-chat-header" style="display: none;">
                     <button class="btn btn-default btn-xs visible-xs mar-rgt" onclick="toggleMobile()"><i class="fa fa-arrow-left"></i></button>
-                    <div class="media">
+                    <div class="media-block" style="width: 100%;">
                         <div class="media-left">
                             <img id="header-avatar" class="img-circle img-sm" src="" alt="">
                         </div>
                         <div class="media-body">
                             <div class="pull-right">
+                                <button class="btn btn-sm btn-info btn-icon btn-circle mar-rgt" onclick="toggleActions()" title="Mostrar/Ocultar Acciones">
+                                    <i class="fa fa-magic"></i>
+                                </button>
                                 <button class="btn btn-sm btn-icon btn-hover-danger" onclick="clearChat()" title="Vaciar historial de chat">
                                     <i class="fa fa-trash-o"></i> Vaciar Chat
                                 </button>
                             </div>
                             <h4 class="mar-no" id="header-name">Cargando...</h4>
-                            <small class="text-muted" id="header-phone"></small>
+                            <div>
+                                <small class="text-muted" id="header-phone"></small>
+                            </div>
+                            <div id="header-campanas-container" style="margin-top: 2px;"></div>
                         </div>
                     </div>
                 </div>
@@ -189,23 +298,140 @@
                     </div>
                 </div>
 
-                <!-- Input Area -->
-                <div class="chat-input-area" id="active-chat-input" style="display: none;">
+                <div class="chat-input-area shadow" style="position: relative;">
                     <div class="input-group">
                         <input type="text" id="btn-input-text" class="form-control input-lg" placeholder="Escribe un mensaje..." autocomplete="off">
                         <span class="input-group-btn">
-                            <button class="btn btn-success btn-lg" type="button" id="btn-chat-send">
+                            <button class="btn btn-secondary btn-lg" type="button" id="btn-record-audio" title="Grabar Nota de Voz">
+                                <i class="fa fa-microphone"></i>
+                            </button>
+                            <button class="btn btn-success btn-lg" type="button" id="btn-chat-send" style="border-radius: 0 4px 4px 0;">
                                 <i class="fa fa-paper-plane"></i>
                             </button>
                         </span>
+                    </div>
+                    <!-- Indicador de Grabación -->
+                    <div id="recording-indicator" style="display: none; padding-top: 8px; color: #e74c3c; text-align: right;">
+                        <i class="fa fa-circle fa-blink mar-rgt"></i> Grabando audio (<span id="recording-time">00:00</span>)
+                        <button id="btn-cancel-recording" class="btn btn-xs btn-default text-danger mar-lft" title="Cancelar nota de voz"><i class="fa fa-times"></i></button>
                     </div>
                 </div>
                 
             </div>
 
+            <!-- LATERAL DERECHO: Acciones Rápidas village-actions-panel -->
+            <div class="chat-actions-sidebar" id="chat-actions-sidebar" style="display: none;">
+                <div class="pad-all bg-dark text-light">
+                    <span class="text-bold"><i class="fa fa-bolt text-warning mar-rgt"></i> Acciones Rápidas</span>
+                </div>
+                
+                <div style="flex-grow: 1; overflow-y: auto;">
+                <div style="flex-grow: 1; overflow-y: auto;">
+                    <!-- Seccion Mensajeria Avanzada village-actions-panel -->
+                    <div class="actions-section" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 15px;">
+                        <span class="actions-title text-warning"><i class="fa fa-crosshairs"></i> Herramientas</span>
+                        <button class="btn btn-warning btn-block text-left btn-labeled" style="border-radius: 4px; font-weight: bold;" id="btn-open-location-modal" data-toggle="modal" data-target="#locationModal">
+                            <i class="btn-label fa fa-map-marker"></i> Enviar Coordenadas GPS
+                        </button>
+                    </div>
+
+                    <!-- Seccion Proveedor village-actions-panel -->
+                    <div class="actions-section" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 15px;">
+                        <div class="pad-ver" style="display:flex; align-items:center; justify-content:space-between">
+                            <span class="text-bold"><i class="fa fa-briefcase mar-rgt text-success"></i> Es Proveedor</span>
+                            <div class="checkbox" style="margin: 0;">
+                                <input id="switch-proveedor" class="magic-checkbox" type="checkbox">
+                                <label for="switch-proveedor" style="margin-bottom:0;"></label>
+                            </div>
+                        </div>
+                        <small class="text-muted" style="font-size:10px; display:block; margin-top: -5px">Oculta al contacto del modelo de Pipeline</small>
+                    </div>
+
+                    <!-- Seccion Mensajes village-actions-panel -->
+                    <div class="actions-section">
+                        <span class="actions-title">Respuestas de Texto</span>
+                        <div class="quick-list">
+                            {% for reply in crm_config.respuestas_rapidas %}
+                                <button class="premium-action-btn quick-reply-btn" data-reply-text="{{ reply.text }}">
+                                    <i class="fa fa-reply text-info"></i>
+                                    <span>{{ reply.label }}</span>
+                                </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Seccion Multimedia village-actions-panel -->
+                    {% if media_templates %}
+                    <div class="actions-section">
+                        <span class="actions-title">Multimedia y Adjuntos</span>
+                        <div class="media-grid">
+                            {% for media in media_templates %}
+                                <div class="media-card quick-media-btn" data-media-id="{{ media.id }}" title="Enviar {{ media.nombre }}">
+                                    {% if media.tipo == 'IMAGE' and media.archivo %}
+                                        <img src="{{ media.archivo.url }}" alt="{{ media.nombre }}" style="width: 100%; height: 60px; object-fit: cover; border-radius: 4px; margin-bottom: 5px;">
+                                    {% else %}
+                                        <i class="fa {% if media.tipo == 'VIDEO' %}fa-video-camera text-primary{% else %}fa-file-pdf-o text-danger{% endif %}"></i>
+                                    {% endif %}
+                                    <span>{{ media.nombre }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
+
+<!-- MODAL ENVIAR UBICACION -->
+<div class="modal fade" id="locationModal" tabindex="-1" role="dialog" aria-labelledby="locationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title text-light" id="locationModalLabel"><i class="fa fa-map-marker"></i> Compartir Ubicación Fixa</h4>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted text-sm">Arrastra el pin al lugar exacto o haz click en el mapa.</p>
+                
+                <!-- Contenedor del Mapa -->
+                <div id="location-picker-map" style="height: 250px; width: 100%; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ddd;"></div>
+
+                <div class="row">
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            <label class="text-xs">Latitud</label>
+                            <input type="text" id="loc-lat" class="form-control input-sm" readonly>
+                        </div>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            <label class="text-xs">Longitud</label>
+                            <input type="text" id="loc-lng" class="form-control input-sm" readonly>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Lugar</label>
+                    <input type="text" id="loc-name" class="form-control" placeholder="Ej: Consultorio, Casa, etc.">
+                </div>
+                <div class="form-group mar-no">
+                    <label>Dirección (Opcional)</label>
+                    <input type="text" id="loc-address" class="form-control" placeholder="Referencia de la calle">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" id="btn-send-location-confirm">Enviar Ubicación</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -219,10 +445,238 @@
         // Polling para el listado global cada 10 segundos
         setInterval(loadChatList, 10000);
 
-        // Envío de mensaje
-        $('#btn-chat-send').on('click', sendMessage);
-        $('#btn-input-text').on('keypress', function(e) {
-            if(e.which == 13) sendMessage();
+        // Respuestas Rápidas
+        $(document).on('click', '.quick-reply-btn', function(e) {
+            const text = $(this).data('reply-text');
+            $('#btn-input-text').val(text).focus();
+        });
+
+        // Multimedia Rápida
+        $(document).on('click', '.quick-media-btn', function(e) {
+            const mediaId = $(this).data('media-id');
+            sendMessage(mediaId);
+        });
+
+        // Enviar Mensaje
+        $('#btn-chat-send').on('click', function(e) {
+            e.preventDefault();
+            sendMessage();
+        });
+        $('#btn-input-text').on('keydown', function(e) {
+            if (e.which == 13) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Evento Switch Proveedor (AJAX)
+        $('#switch-proveedor').on('change', function(e) {
+            if (!activeContactId) return;
+            const isProveedor = $(this).is(':checked');
+            
+            $.ajax({
+                url: `/crm/contactos/${activeContactId}/toggle-proveedor/`,
+                type: 'POST',
+                success: function(res) {
+                    if (res.status === 'ok') {
+                        // El cambio fue guardado correctamente
+                        console.log('Modificado a proveedor:', res.es_proveedor);
+                    }
+                }
+            });
+        });
+
+        // Eventos de Envio de Locacion
+        let pickerMap, pickerMarker;
+        const defaultLat = -2.1709979;
+        const defaultLng = -79.9220962;
+
+        $('#locationModal').on('shown.bs.modal', function () {
+            if (!activeContactId) {
+                alert('Abre un chat primero para enviar una ubicación.');
+                $('#locationModal').modal('hide');
+                return;
+            }
+            
+            $('#loc-contact-name').text($('#header-name').text());
+
+            // Inicializar mapa si no existe
+            if (!pickerMap) {
+                pickerMap = L.map('location-picker-map').setView([defaultLat, defaultLng], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(pickerMap);
+
+                pickerMarker = L.marker([defaultLat, defaultLng], {draggable: true}).addTo(pickerMap);
+                
+                // Sincronizar coordenadas iniciales
+                $('#loc-lat').val(defaultLat);
+                $('#loc-lng').val(defaultLng);
+
+                // Evento al arrastrar
+                pickerMarker.on('dragend', function(e) {
+                    const pos = pickerMarker.getLatLng();
+                    $('#loc-lat').val(pos.lat.toFixed(7));
+                    $('#loc-lng').val(pos.lng.toFixed(7));
+                });
+
+                // Evento al hacer click en el mapa
+                pickerMap.on('click', function(e) {
+                    pickerMarker.setLatLng(e.latlng);
+                    $('#loc-lat').val(e.latlng.lat.toFixed(7));
+                    $('#loc-lng').val(e.latlng.lng.toFixed(7));
+                });
+            } else {
+                // Resetear posición si ya existía
+                pickerMap.invalidateSize();
+                pickerMap.setView([defaultLat, defaultLng], 15);
+                pickerMarker.setLatLng([defaultLat, defaultLng]);
+                $('#loc-lat').val(defaultLat);
+                $('#loc-lng').val(defaultLng);
+            }
+        });
+
+        $('#btn-send-location-confirm').on('click', function(e) {
+            e.preventDefault();
+            if (!activeContactId) return;
+
+            const lat = $('#loc-lat').val().trim();
+            const lng = $('#loc-lng').val().trim();
+            const name = $('#loc-name').val().trim();
+            const address = $('#loc-address').val().trim();
+
+            if (!lat || !lng) return alert('La Latitud y Longitud son requeridas.');
+
+            const originalBtnHtml = $(this).html();
+            $(this).html('<i class="fa fa-spinner fa-spin"></i> Enviando...').prop('disabled', true);
+
+            $.ajax({
+                url: `/chat/api/chats/${activeContactId}/send-location/`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    lat: lat,
+                    lng: lng,
+                    name: name,
+                    address: address
+                }),
+                success: function(res) {
+                    $('#locationModal').modal('hide');
+                    $('#btn-send-location-confirm').html(originalBtnHtml).prop('disabled', false);
+                    if (res.success) {
+                        fetchMessages(activeContactId);
+                        loadChatList();
+                    } else {
+                        alert('Error: ' + res.error);
+                    }
+                },
+                error: function(err) {
+                    $('#locationModal').modal('hide');
+                    $('#btn-send-location-confirm').html(originalBtnHtml).prop('disabled', false);
+                    alert('Falló el envío de ubicación.');
+                }
+            });
+        });
+
+        // ---------------------------------------- //
+        // -------- MICROFONO / NOTAS VOZ --------- //
+        // ---------------------------------------- //
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let recordTimer;
+        let recordSeconds = 0;
+
+        $('#btn-record-audio').on('click', function(e) {
+            e.preventDefault();
+            if (!activeContactId) {
+                alert('Selecciona un chat primero.');
+                return;
+            }
+
+            if (isRecording) {
+                // DETENER GRABACION Y ENVIAR
+                mediaRecorder.stop();
+            } else {
+                // INICIAR GRABACION
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        mediaRecorder = new MediaRecorder(stream);
+                        mediaRecorder.start();
+                        isRecording = true;
+                        audioChunks = [];
+
+                        $('#btn-record-audio').removeClass('btn-secondary').addClass('btn-danger').html('<i class="fa fa-stop"></i>');
+                        $('#recording-indicator').show();
+                        
+                        recordSeconds = 0;
+                        $('#recording-time').text('00:00');
+                        recordTimer = setInterval(() => {
+                            recordSeconds++;
+                            const m = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
+                            const s = String(recordSeconds % 60).padStart(2, '0');
+                            $('#recording-time').text(`${m}:${s}`);
+                        }, 1000);
+
+                        mediaRecorder.addEventListener("dataavailable", event => {
+                            audioChunks.push(event.data);
+                        });
+
+                        mediaRecorder.addEventListener("stop", () => {
+                            clearInterval(recordTimer);
+                            isRecording = false;
+                            $('#btn-record-audio').removeClass('btn-danger').addClass('btn-secondary').html('<i class="fa fa-microphone"></i>');
+                            $('#recording-indicator').hide();
+                            
+                            // Liberar mic
+                            stream.getTracks().forEach(track => track.stop());
+
+                            if (audioChunks.length > 0) {
+                                // Subir la nota de voz asíncronamente
+                                const audioBlob = new Blob(audioChunks, { type: 'audio/ogg' });
+                                const formData = new FormData();
+                                formData.append('audio', audioBlob, 'voicenote.ogg');
+
+                                $('#chat-textarea').prop('disabled', true).val('Subiendo audio...');
+
+                                $.ajax({
+                                    url: `/chat/api/chats/${activeContactId}/send-voicenote/`,
+                                    type: 'POST',
+                                    data: formData,
+                                    processData: false,
+                                    contentType: false,
+                                    success: function(res) {
+                                        $('#chat-textarea').prop('disabled', false).val('');
+                                        if (res.success) {
+                                            fetchMessages(activeContactId);
+                                            loadChatList();
+                                        } else {
+                                            alert('No se pudo enviar la nota de voz: ' + res.error);
+                                        }
+                                    },
+                                    error: function(err) {
+                                        $('#chat-textarea').prop('disabled', false).val('');
+                                        alert('Falló el envío de la nota de voz. Revise la consola web.');
+                                        console.error(err);
+                                    }
+                                });
+                            }
+                        });
+                    })
+                    .catch(e => {
+                        console.error("No se pudo iniciar micrófono:", e);
+                        alert("Error accediendo al micrófono. ¿Diste permisos?");
+                    });
+            }
+        });
+
+        $('#btn-cancel-recording').on('click', function(e) {
+            e.preventDefault();
+            if (isRecording && mediaRecorder) {
+                // Cancelar y borrar
+                audioChunks = []; // vaciar
+                mediaRecorder.stop();
+            }
         });
     });
 
@@ -244,15 +698,20 @@
                 const unread = chat.no_leido ? '<span class="unread-indicator pull-right"></span>' : '';
                 const directionPrefix = chat.direccion_ultimo === 'OUTBOUND' ? '<span>Usted: </span>' : '';
                 
+                // Badge de origen
+                const originLabel = chat.es_organico 
+                    ? '<span class="label label-warning mar-lgt" style="font-size: 10px;">Orgánico</span>' 
+                    : '<span class="label label-info mar-lgt" style="font-size: 10px;">BBDD</span>';
+
                 html += `
-                    <div class="chat-item ${isActive}" data-id="${chat.id}" onclick="openChat(${chat.id}, '${chat.nombre}', '${chat.telefono}')">
+                    <div class="chat-item ${isActive}" data-id="${chat.id}" onclick="openChat(${chat.id}, '${chat.nombre}', '${chat.telefono}', ${chat.es_organico}, '${(chat.campanas || []).join(', ')}', ${chat.is_hidden}, ${chat.es_proveedor})">
                         <div class="media">
                             <div class="media-left">
                                 <img class="img-circle img-sm" src="https://ui-avatars.com/api/?name=${encodeURIComponent(chat.nombre)}&background=random" alt="">
                             </div>
                             <div class="media-body">
                                 <p class="mar-no text-bold">
-                                    ${chat.nombre} ${unread}
+                                    ${chat.nombre} ${originLabel} ${unread}
                                     <small class="text-muted pull-right" style="font-weight:normal;">${chat.fecha_ultimo || ''}</small>
                                 </p>
                                 <p class="text-muted mar-no text-sm truncate" style="max-width: 200px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
@@ -269,24 +728,43 @@
             if (forceId && !activeContactId) {
                 const autoTarget = data.chats.find(c => c.id == forceId);
                 if (autoTarget) {
-                    openChat(autoTarget.id, autoTarget.nombre, autoTarget.telefono);
+                    openChat(autoTarget.id, autoTarget.nombre, autoTarget.telefono, autoTarget.es_organico, (autoTarget.campanas || []).join(', '), autoTarget.is_hidden, autoTarget.es_proveedor);
                 }
             }
         });
     }
 
-    function openChat(id, nombre, telefono) {
+    function openChat(id, nombre, displayTelefono, esOrganico = false, campanasStr = '', isHidden = false, esProveedor = false) {
         activeContactId = id;
         
         // UI
         $('.chat-item').removeClass('active');
         $(`.chat-item[data-id="${id}"]`).addClass('active');
         $('#active-chat-header').show();
-        $('#active-chat-input').show();
-        $('#header-name').text(nombre);
-        $('#header-phone').text(telefono);
+        $('#active-chat-input').show(); 
+        $('#chat-actions-sidebar').show();
+        $('#chat-messages-container').show();
+        $('#chat-messages-empty').hide(); 
+        
+        const originLabel = esOrganico 
+            ? '<span class="label label-warning mar-lgt">Orgánico</span>' 
+            : '<span class="label label-info mar-lgt">BBDD Farmacias</span>';
+            
+        const campanasHtml = campanasStr 
+            ? `<small class="text-muted"><i class="fa fa-bullhorn"></i> Campañas: <b>${campanasStr}</b></small>` 
+            : '';
+
+        $('#header-name').html(nombre + ' ' + originLabel);
+        
+        const phoneLabel = isHidden ? `<span class="label label-default" style="font-size:11px"><i class="fa fa-user-secret"></i> Oculto por Privacidad (WA)</span>` : displayTelefono;
+        $('#header-phone').html(phoneLabel);
+        $('#header-campanas-container').html(campanasHtml);
         $('#header-avatar').attr('src', `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=random`);
         $('#main-chat-container').addClass('mobile-active');
+        $('#chat-actions-sidebar').show(); // Mostrar sidebar de acciones al abrir chat
+        
+        // Configurar Switch Proveedor
+        $('#switch-proveedor').prop('checked', esProveedor);
 
         // Reset y Carga
         const msgContainer = $('#chat-messages-container');
@@ -304,25 +782,60 @@
 
         $.getJSON(`/chat/api/chats/${contactId}/`, function(data) {
             const container = $('#chat-messages-container');
-            const isAtBottom = (container[0].scrollHeight - container.scrollTop() <= container.outerHeight() + 50);
+            const isAtBottom = (container[0].scrollHeight - container.scrollTop() <= container.outerHeight() + 80);
+            
+            // Si es la primera carga (solo hay el spinner o el saludo inicial)
+            const isInitialLoad = container.find('.message-bubble').length === 0;
+            
+            if (isInitialLoad) {
+                container.empty();
+            }
 
-            let html = '';
             data.mensajes.forEach(m => {
-                const typeClass = m.direccion === 'OUTBOUND' ? 'msg-out' : 'msg-in';
+                // Si el mensaje ya existe en el DOM, solo actualizamos su estado (si es OUTBOUND)
+                const existing = container.find(`[data-msg-id="${m.id}"]`);
                 const estadoIcon = m.direccion === 'OUTBOUND' ? getEstadoItem(m.estado) : '';
+
+                if (existing.length > 0) {
+                    if (m.direccion === 'OUTBOUND') {
+                        existing.find('.msg-meta').html(`${m.fecha} ${estadoIcon}`);
+                    }
+                    return;
+                }
+
+                // Si no existe, lo creamos
+                const typeClass = m.direccion === 'OUTBOUND' ? 'msg-out' : 'msg-in';
                 
-                html += `
-                    <div class="message-bubble ${typeClass}">
+                let mediaHtml = '';
+                if (m.media_url) {
+                    if (m.mimetype === 'text/location') {
+                        mediaHtml = `<div class="mar-btm"><a href="${m.media_url}" target="_blank" class="btn btn-primary btn-sm"><i class="fa fa-map-marker"></i> Ver Ubicación en Mapa</a></div>`;
+                    } else {
+                        const proxyUrl = `/chat/api/chats/media/${m.id}/`;
+                        if (m.media_type === 'AUDIO') {
+                            mediaHtml = `<div class="mar-btm"><audio controls preload="metadata" style="max-width: 100%;" class="audio-player"><source src="${proxyUrl}" type="audio/ogg">Tu navegador no soporta audio.</audio></div>`;
+                        } else if (m.media_type === 'IMAGE') {
+                            mediaHtml = `<div class="mar-btm"><img src="${proxyUrl}" class="img-responsive thumbnail mar-no" style="max-height: 250px; cursor: pointer;" onclick="window.open('${proxyUrl}', '_blank')"></div>`;
+                        } else if (m.media_type === 'VIDEO') {
+                            mediaHtml = `<div class="mar-btm"><video controls style="max-width: 100%; max-height: 250px;"><source src="${proxyUrl}">Tu navegador no soporta video.</video></div>`;
+                        } else if (m.media_type === 'DOCUMENT') {
+                            mediaHtml = `<div class="mar-btm"><a href="${proxyUrl}" target="_blank" class="btn btn-default btn-sm"><i class="fa fa-file"></i> Ver Documento</a></div>`;
+                        }
+                    }
+                }
+                
+                const bubbleHtml = `
+                    <div class="message-bubble ${typeClass}" data-msg-id="${m.id}">
+                        ${mediaHtml}
                         ${m.texto}
                         <div class="msg-meta">${m.fecha} ${estadoIcon}</div>
                     </div>
                 `;
+                container.append(bubbleHtml);
             });
-            
-            container.html(html);
 
-            // Auto-scroll solo si el usuario estaba abajo
-            if (isAtBottom) {
+            // Auto-scroll si es necesario
+            if (isAtBottom || isInitialLoad) {
                 container.scrollTop(container[0].scrollHeight);
             }
         });
@@ -334,24 +847,37 @@
         return '<i class="fa fa-check text-muted"></i>';
     }
 
-    function sendMessage() {
+    let isSending = false;
+    function sendMessage(mediaId = null) {
+        if (isSending) return;
         const input = $('#btn-input-text');
         const text = input.val().trim();
-        if (!text || !activeContactId) return;
-
-        // Optimismo UI: limpiar campo de inmediato
-        input.val('');
         
+        if (!text && !mediaId) return;
+        if (!activeContactId) return;
+
+        isSending = true;
+        // Limpiamos y bloqueamos para evitar doble envío
+        input.prop('disabled', true);
+        
+        const payload = { texto: text };
+        if (mediaId) payload.media_id = mediaId;
+
         $.ajax({
             url: `/chat/api/chats/${activeContactId}/send/`,
             type: 'POST',
-            data: JSON.stringify({ texto: text }),
+            data: JSON.stringify(payload),
             contentType: 'application/json',
             headers: {"X-CSRFToken": "{{ csrf_token }}"},
             success: function(response) {
+                isSending = false;
+                input.val('').prop('disabled', false).focus();
                 fetchMessages(activeContactId);
             },
             error: function(err) {
+                isSending = false;
+                // Si falla, devolvemos el texto al input para que no se pierda
+                input.prop('disabled', false).val(text).focus();
                 alert("Error al enviar: " + (err.responseJSON ? err.responseJSON.error : "Desconocido"));
             }
         });
@@ -381,6 +907,9 @@
                             <p>No hay mensajes en este historial.</p>
                         </div>
                     `);
+                    $('#chat-messages-container').show();
+                    $('#chat-actions-sidebar').show();
+                    
                     // Refrescar lista lateral para actualizar el "Ultimo mensaje"
                     loadChatList();
                 },
@@ -393,6 +922,10 @@
 
     function toggleMobile() {
         $('#main-chat-container').removeClass('mobile-active');
+    }
+
+    function toggleActions() {
+        $('#chat-actions-sidebar').toggleClass('collapsed');
     }
 </script>
 {% endblock %}

@@ -19,6 +19,7 @@ urlpatterns = [
     path('campanas/<int:pk>/preview/', views.CampaignPreviewView.as_view(), name='campaign_preview'),
     path('campanas/<int:pk>/execute/', views.CampaignExecuteView.as_view(), name='campaign_execute'),
     path('campanas/<int:pk>/reporte/', views.CampaignReportView.as_view(), name='campaign_report'),
+    path('campanas/<int:pk>/eliminar/', views.CampanaDeleteView.as_view(), name='campaign_delete'),
     
     # Etiquetas
     path('etiquetas/', views.EtiquetaListView.as_view(), name='etiqueta_list'),
@@ -29,5 +30,11 @@ urlpatterns = [
     # Pipeline / Kanban
     path('pipeline/', views.PipelineBoardView.as_view(), name='pipeline_board'),
     path('pipeline/update-stage/', views.UpdateContactStageAPIView.as_view(), name='api_update_stage'),
+    path('contactos/<int:pk>/toggle-proveedor/', views.ToggleProveedorAPIView.as_view(), name='toggle_proveedor'),
     path('contactos/<int:pk>/eliminar/', views.CrmContactDeleteView.as_view(), name='contact_delete'),
+    
+    # Configuración Global y Multimedia
+    path('configuracion/', views.CrmConfigUpdateView.as_view(), name='config_edit'),
+    path('configuracion/multimedia/crear/', views.CrmMediaTemplateCreateView.as_view(), name='media_template_create'),
+    path('configuracion/multimedia/<int:pk>/eliminar/', views.CrmMediaTemplateDeleteView.as_view(), name='media_template_delete'),
 ]

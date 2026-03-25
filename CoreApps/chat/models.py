@@ -49,9 +49,23 @@ class ChatMensaje(models.Model):
         ('ERROR', 'Error'),
     ]
 
+    MEDIA_TYPE_CHOICES = [
+        ('TEXT', 'Texto'),
+        ('IMAGE', 'Imagen'),
+        ('VIDEO', 'Video'),
+        ('AUDIO', 'Audio/Voz'),
+        ('DOCUMENT', 'Documento'),
+    ]
+
     contacto = models.ForeignKey('crm_marketing.CrmContact', on_delete=models.CASCADE, related_name='historial_chat')
     direccion = models.CharField(max_length=15, choices=DIRECCION_CHOICES)
     texto = models.TextField(blank=True, null=True)
+    
+    # Multimedia
+    media_url = models.URLField(max_length=1000, blank=True, null=True)
+    media_type = models.CharField(max_length=20, choices=MEDIA_TYPE_CHOICES, default='TEXT')
+    media_key = models.CharField(max_length=200, blank=True, null=True)
+    mimetype = models.CharField(max_length=100, blank=True, null=True)
     
     # Metadatos técnicos
     wasender_message_id = models.CharField(max_length=200, blank=True, null=True, unique=True)

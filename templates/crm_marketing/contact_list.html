@@ -131,9 +131,23 @@
                                     <input type="checkbox" class="contact-checkbox" value="{{ contacto.id }}">
                                 </td>
                                 <td>{{ contacto.nombres }} {{ contacto.apellidos }}</td>
-                                <td>{{ contacto.telefono }}</td>
+                                <td>
+                                    {% if contacto.is_hidden_number %}
+                                        <span class="label label-default" style="font-size: 10px;"><i class="fa fa-user-secret"></i> Oculto (WA)</span>
+                                    {% else %}
+                                        {{ contacto.telefono }}
+                                    {% endif %}
+                                </td>
                                 <td>{{ contacto.ciudad.nombre|default:"-" }}</td>
-                                <td>{{ contacto.farmacia_origen.nombre|default:"-" }}</td>
+                                <td>
+                                    {% if contacto.farmacia_origen %}
+                                        {{ contacto.farmacia_origen.nombre }}
+                                    {% elif contacto.es_organico %}
+                                        <span class="label label-warning">WhatsApp Orgánico</span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% for med in contacto.medicamentos_comprados.all %}
                                         <span class="label label-info">{{ med.nombre }}</span>

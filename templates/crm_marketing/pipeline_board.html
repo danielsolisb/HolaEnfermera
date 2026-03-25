@@ -146,6 +146,15 @@
     
     .sortable-ghost { opacity: 0.4; }
     .sortable-chosen { background-color: #f8f9fa; }
+    .card-sangre-fria {
+        border: 2px solid #ef5350 !important;
+        animation: pulse-border 2s infinite;
+    }
+    @keyframes pulse-border {
+        0% { box-shadow: 0 0 0 0 rgba(239, 83, 80, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(239, 83, 80, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 83, 80, 0); }
+    }
 </style>
 {% endblock %}
 
@@ -164,21 +173,55 @@
                 
                 <div class="cards-container" id="list-{{ col.etapa.id }}" data-etapa="{{ col.etapa.id }}">
                     {% for contacto in col.contactos %}
-                    <div class="lead-card col-{{ col.etapa.id|lower }}" data-id="{{ contacto.id }}">
-                        <div class="lead-name">{{ contacto.nombres }} {{ contacto.apellidos }}</div>
-                        <div class="lead-info">
-                            <div><i class="fa fa-phone"></i> {{ contacto.telefono }}</div>
-                            <div><i class="fa fa-calendar"></i> Registro: {{ contacto.fecha_registro|date:"d/m/y" }}</div>
+                    {% with sf=contacto.get_sangre_fria_info %}
+                    <div class="card panel {% if sf.exceeded %}panel-danger card-sangre-fria{% else %}panel-default{% endif %} col-{{ col.etapa.id|lower }}" 
+                         data-id="{{ contacto.id }}" 
+                         style="margin-bottom: 10px; cursor: move; border-radius: 4px;">
+                        <div class="panel-body" style="padding: 10px;">
+                            <div class="text-bold text-main" style="font-size: 1.1em;">
+                                {{ contacto.nombres }} {{ contacto.apellidos }}
+                                {% if contacto.es_organico %}
+                                    <span class="label label-warning pull-right" style="font-size: 9px;">Orgánico</span>
+                                {% else %}
+                                    <span class="label label-info pull-right" style="font-size: 9px;">BBDD</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-muted small"><i class="fa fa-phone"></i> {{ contacto.telefono|default:"Sin número" }}</div>
+                            
+                            {% if sf.exceeded %}
+                                <div class="mar-top-xs text-danger text-bold" style="font-size: 0.85em;">
+                                    <i class="fa fa-clock"></i> ¡SANGRE FRÍA! ({{ sf.minutes }}m)
+                                </div>
+                            {% endif %}
+                            {% with campanas=contacto.get_campanas_nombres %}
+                                {% if campanas %}
+                                    <div class="mar-top-xs">
+                                        <i class="fa fa-bullhorn text-primary"></i> 
+                                        {% for c_nom in campanas %}
+                                            <span class="text-primary" style="font-weight: 600;">{{ c_nom }}</span>{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+                            <div class="mar-top-xs"><i class="fa fa-calendar"></i> {{ contacto.fecha_registro|date:"d/m/y" }}</div>
                             {% if contacto.ciudad %}
                                 <div class="mar-top-xs"><span class="label label-default">{{ contacto.ciudad.nombre }}</span></div>
                             {% endif %}
                         </div>
-                        <div class="mar-top-sm text-right">
-                             <a href="{% url 'crm_marketing:contact_detail' contacto.id %}" class="btn btn-xs btn-default btn-icon" title="Ver Detalle"><i class="fa fa-eye"></i></a>
-                             <button type="button" class="btn btn-xs btn-info btn-icon" onclick="openQuickChat({{ contacto.id }}, '{{ contacto.nombres|escapejs }} {{ contacto.apellidos|escapejs }}')" title="Chat Rápido"><i class="fa fa-comment"></i></button>
-                             <a href="{% url 'chat:inbox' %}?contact_id={{ contacto.id }}" class="btn btn-xs btn-success btn-icon" title="Ir al Inbox Full"><i class="fab fa-whatsapp"></i></a>
-                        </div>
+                         <div class="panel-footer text-right" style="padding: 8px 10px; background-color: #f9f9f9; border-top: 1px solid #eee;">
+                              <a href="{% url 'crm_marketing:contact_detail' contacto.id %}" class="btn btn-xs btn-default btn-icon" title="Ver Detalle"><i class="fa fa-eye"></i></a>
+                              <button type="button" class="btn btn-xs btn-info btn-icon btn-open-chat" 
+                                      data-id="{{ contacto.id }}"
+                                      data-name="{{ contacto.nombres|escapejs }} {{ contacto.apellidos|escapejs }}"
+                                      data-phone="{{ contacto.telefono|default:'' }}"
+                                      data-campaigns='{{ contacto.get_campanas_nombres|join:", "|escapejs }}'
+                                      title="Chat Rápido">
+                                  <i class="fa fa-comment"></i>
+                              </button>
+                              <a href="{% url 'chat:inbox' %}?contact_id={{ contacto.id }}" class="btn btn-xs btn-success btn-icon" title="Ir al Inbox Full"><i class="fab fa-whatsapp"></i></a>
+                         </div>
                     </div>
+                    {% endwith %}
                     {% endfor %}
                 </div>
             </div>
@@ -192,16 +235,43 @@
 <div id="drawer-overlay" class="drawer-overlay" onclick="closeQuickChat()"></div>
 <div id="quick-chat-drawer" class="chat-drawer">
     <div class="drawer-header">
-        <h4 class="mar-no" id="drawer-title">Chat Rápido</h4>
-        <div>
-            <a id="drawer-full-link" href="#" class="btn btn-xs btn-default btn-icon" title="Abrir en pantalla completa"><i class="fa fa-expand"></i></a>
-            <button class="btn btn-xs btn-danger btn-icon" onclick="closeQuickChat()"><i class="fa fa-times"></i></button>
+        <div class="media-block" style="width: 100%;">
+            <div class="media-body">
+                <div class="pull-right">
+                    <a id="drawer-full-link" href="#" class="btn btn-xs btn-default btn-icon" title="Abrir en pantalla completa"><i class="fa fa-expand"></i></a>
+                    <button class="btn btn-xs btn-danger btn-icon" onclick="closeQuickChat()"><i class="fa fa-times"></i></button>
+                </div>
+                <h4 class="mar-no" id="drawer-title">Chat Rápido</h4>
+                <div>
+                    <small class="text-muted" id="drawer-phone"></small>
+                </div>
+                <div id="drawer-campanas-container" style="margin-top: 2px;"></div>
+            </div>
         </div>
     </div>
     <div class="drawer-body d-flex flex-column" id="drawer-messages" style="display: flex; flex-direction: column;">
         <!-- Mensajes aquí -->
     </div>
     <div class="drawer-footer">
+        <!-- Respuestas Rápidas -->
+        <div id="drawer-quick-replies" class="mar-btm">
+            {% for reply in crm_config.respuestas_rapidas %}
+                <button class="btn btn-default btn-xs mar-rgt mar-btm btn-rounded drawer-quick-reply" data-reply-text="{{ reply.text }}">{{ reply.label }}</button>
+            {% endfor %}
+            
+            {% if media_templates %}
+                <div class="pad-ver">
+                    <small class="text-muted display-block mar-btm">Adjuntos rápidos:</small>
+                    {% for media in media_templates %}
+                        <button class="btn btn-info btn-xs mar-rgt mar-btm btn-rounded drawer-quick-media" 
+                                data-media-id="{{ media.id }}" 
+                                title="Enviar {{ media.nombre }}">
+                            <i class="fa {% if media.tipo == 'IMAGE' %}fa-image{% elif media.tipo == 'VIDEO' %}fa-video-camera{% else %}fa-file-pdf-o{% endif %}"></i> {{ media.nombre }}
+                        </button>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
         <div class="input-group">
             <input type="text" id="drawer-input" class="form-control" placeholder="Escribe algo...">
             <span class="input-group-btn">
@@ -248,13 +318,53 @@
             });
         });
 
-        $('#drawer-send-btn').on('click', sendDrawerMessage);
-        $('#drawer-input').on('keypress', function(e) { if(e.which == 13) sendDrawerMessage(); });
+        // Abrir Chat Rápido desde botón refactorizado
+        $(document).on('click', '.btn-open-chat', function() {
+            const btn = $(this);
+            openQuickChat(
+                btn.data('id'),
+                btn.data('name'),
+                btn.data('phone'),
+                btn.data('campaigns')
+            );
+        });
+
+        // Enviar mensaje Drawer
+        $('#drawer-send-btn').on('click', function(e) {
+            e.preventDefault();
+            sendDrawerMessage();
+        });
+        $('#drawer-input').on('keydown', function(e) {
+            if (e.which == 13) {
+                e.preventDefault();
+                sendDrawerMessage();
+            }
+        });
+
+        // Respuestas Rápidas Drawer
+        $(document).on('click', '.drawer-quick-reply', function() {
+            const text = $(this).data('reply-text');
+            $('#drawer-input').val(text).focus();
+        });
+
+        // Multimedia Rápida Drawer
+        $(document).on('click', '.drawer-quick-media', function() {
+            const mediaId = $(this).data('media-id');
+            sendDrawerMessage(mediaId);
+        });
     });
 
-    function openQuickChat(id, nombre) {
+    function openQuickChat(id, nombre, telefono, campanasStr = '') {
         currentDrawerContactId = id;
+        $('#drawer-messages').empty(); // Vaciar inmediatamente para evitar fugas de datos de otros contactos
         $('#drawer-title').text(nombre);
+        $('#drawer-phone').text(telefono);
+
+        const campanasHtml = campanasStr 
+            ? `<small class="text-muted"><i class="fa fa-bullhorn"></i> Campañas: <b>${campanasStr}</b></small>` 
+            : '';
+        $('#drawer-campanas-container').html(campanasHtml);
+
         $('#drawer-full-link').attr('href', `/chat/inbox/?contact_id=${id}`);
         $('#quick-chat-drawer').addClass('open');
         $('#drawer-overlay').addClass('active');
@@ -275,30 +385,68 @@
         if (currentDrawerContactId !== contactId) return;
         
         $.getJSON(`/chat/api/chats/${contactId}/`, function(data) {
+            // Re-verificar que seguimos en el mismo contacto tras la carga asíncrona
+            if (currentDrawerContactId !== contactId) return;
+            
             const container = $('#drawer-messages');
-            let html = '';
+
             data.mensajes.forEach(m => {
+                // Si el mensaje ya existe, no hacer nada (en el drawer no mostramos estado de leido aún)
+                if (container.find(`[data-msg-id="${m.id}"]`).length > 0) return;
+
                 const typeClass = m.direccion === 'OUTBOUND' ? 'msg-out' : 'msg-in';
-                html += `<div class="msg-bubble ${typeClass}">${m.texto}</div>`;
+                
+                let mediaHtml = '';
+                if (m.media_url) {
+                    const proxyUrl = `/chat/api/chats/media/${m.id}/`;
+                    if (m.media_type === 'AUDIO') {
+                        mediaHtml = `<div class="mar-btm"><audio controls preload="metadata" style="max-width: 100%;"><source src="${proxyUrl}" type="audio/ogg"></audio></div>`;
+                    } else if (m.media_type === 'IMAGE') {
+                        mediaHtml = `<div class="mar-btm"><img src="${proxyUrl}" class="img-responsive thumbnail mar-no" style="max-height: 150px; cursor: pointer;" onclick="window.open('${proxyUrl}', '_blank')"></div>`;
+                    }
+                }
+
+                const bubbleHtml = `<div class="msg-bubble ${typeClass}" data-msg-id="${m.id}">${mediaHtml}${m.texto}</div>`;
+                container.append(bubbleHtml);
             });
-            container.html(html);
+            
+            // Auto-scroll simple
             container.scrollTop(container[0].scrollHeight);
         });
     }
 
-    function sendDrawerMessage() {
+    let isSendingDrawer = false;
+    function sendDrawerMessage(mediaId = null) {
+        if (isSendingDrawer) return;
+
         const input = $('#drawer-input');
         const text = input.val().trim();
-        if (!text || !currentDrawerContactId) return;
+        if (!text && !mediaId) return;
+        if (!currentDrawerContactId) return;
 
-        input.val('');
+        isSendingDrawer = true;
+        // Limpiamos y bloqueamos para evitar doble envío
+        input.prop('disabled', true);
+        
+        const payload = { texto: text };
+        if (mediaId) payload.media_id = mediaId;
+
         $.ajax({
             url: `/chat/api/chats/${currentDrawerContactId}/send/`,
             type: 'POST',
-            data: JSON.stringify({ texto: text }),
+            data: JSON.stringify(payload),
             contentType: 'application/json',
             headers: {"X-CSRFToken": "{{ csrf_token }}"},
-            success: function() { loadDrawerMessages(currentDrawerContactId); }
+            success: function() { 
+                isSendingDrawer = false;
+                input.val('').prop('disabled', false).focus();
+                loadDrawerMessages(currentDrawerContactId); 
+            },
+            error: function(err) {
+                isSendingDrawer = false;
+                input.prop('disabled', false).val(text).focus();
+                alert("Error al enviar: " + (err.responseJSON ? err.responseJSON.error : "Desconocido"));
+            }
         });
     }
 

@@ -4,13 +4,50 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, FormView, UpdateView, View, CreateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from .models import CrmContact, Farmacia, Etiqueta, ProductoCRM
+from .models import CrmContact, Farmacia, Etiqueta, ProductoCRM, CrmConfig, CrmMediaTemplate
 from CoreApps.main.models import Ciudad
 
 class GestorCrmMixin(LoginRequiredMixin, UserPassesTestMixin):
     """Solo permite acceso a staff o superusuarios al CRM"""
     def test_func(self):
         return self.request.user.is_staff
+
+class CrmConfigUpdateView(GestorCrmMixin, UpdateView):
+    model = CrmConfig
+    template_name = 'crm_marketing/config_form.html'
+    fields = ['tiempo_alerta_leads', 'respuestas_rapidas']
+    
+    def get_object(self, queryset=None):
+        return CrmConfig.get_solo()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['media_templates'] = CrmMediaTemplate.objects.all()
+        return context
+
+    def get_success_url(self):
+        messages.success(self.request, "Configuración del CRM actualizada correctamente.")
+        return reverse_lazy('crm_marketing:config_edit')
+
+class CrmMediaTemplateCreateView(GestorCrmMixin, CreateView):
+    model = CrmMediaTemplate
+    fields = ['nombre', 'archivo', 'tipo']
+    success_url = reverse_lazy('crm_marketing:config_edit')
+    
+    def form_valid(self, form):
+        messages.success(self.request, "Plantilla multimedia creada con éxito.")
+        return super().form_valid(form)
+
+class CrmMediaTemplateDeleteView(GestorCrmMixin, View):
+    def get(self, request, pk, *args, **kwargs):
+        from .models import CrmMediaTemplate
+        try:
+            obj = CrmMediaTemplate.objects.get(pk=pk)
+            obj.delete()
+            messages.success(request, "Plantilla multimedia eliminada correctamente.")
+        except CrmMediaTemplate.DoesNotExist:
+            messages.error(request, "La plantilla no existe.")
+        return redirect('crm_marketing:config_edit')
 
 class CrmContactListView(GestorCrmMixin, ListView):
     model = CrmContact
@@ -74,20 +111,30 @@ class CrmContactUpdateView(GestorCrmMixin, UpdateView):
     fields = [
         'nombres', 'apellidos', 'cedula', 'telefono', 'email', 
         'fecha_nacimiento', 'es_edad_estimada', 'ciudad', 'zona_barrio', 
-        'farmacia_origen', 'etiquetas', 'medicamentos_comprados'
+        'farmacia_origen', 'etiquetas', 'medicamentos_comprados', 'es_proveedor'
     ]
     
     def get_success_url(self):
         messages.success(self.request, "Contacto actualizado correctamente.")
         return reverse_lazy('crm_marketing:contact_detail', kwargs={'pk': self.object.pk})
 
-class CrmContactDeleteView(GestorCrmMixin, DeleteView):
-    model = CrmContact
-    success_url = reverse_lazy('crm_marketing:contact_list')
-    
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, "Contacto eliminado correctamente.")
-        return super().delete(request, *args, **kwargs)
+class CrmContactDeleteView(GestorCrmMixin, View):
+    def post(self, request, pk, *args, **kwargs):
+        return self._eliminar_contacto(request, pk)
+
+    def get(self, request, pk, *args, **kwargs):
+        return self._eliminar_contacto(request, pk)
+        
+    def _eliminar_contacto(self, request, pk):
+        try:
+            obj = CrmContact.objects.get(pk=pk)
+            # Esto eliminará el contacto y las conversaciones/chats asociados en cascada en la BBDD del CRM.
+            # NO afecta a WhatsApp ni a WASender.
+            obj.delete()
+            messages.success(request, "Contacto eliminado correctamente.")
+        except CrmContact.DoesNotExist:
+            messages.error(request, "El contacto no existe.")
+        return redirect('crm_marketing:contact_list')
 
 class AssignTagsBulkView(GestorCrmMixin, View):
     """Vista que recibe filtros por GET/POST y una etiqueta, y se la asigna a todos los contactos resultantes"""
@@ -418,6 +465,16 @@ class CampanaUpdateView(GestorCrmMixin, UpdateView):
         context['is_update'] = True
         return context
 
+class CampanaDeleteView(GestorCrmMixin, DeleteView):
+    model = CampanaDifusion
+    template_name = 'crm_marketing/campaign_confirm_delete.html'
+    success_url = reverse_lazy('crm_marketing:campaign_list')
+
+    def get_success_url(self):
+        from django.contrib import messages
+        messages.success(self.request, "Campaña eliminada correctamente.")
+        return super().get_success_url()
+
 class CampaignPreviewView(GestorCrmMixin, DetailView):
     model = CampanaDifusion
     template_name = 'crm_marketing/campaign_preview.html'
@@ -470,6 +527,7 @@ class CampaignReportView(GestorCrmMixin, DetailView):
         # Estadísticas rápidas
         context['total'] = mensajes.count()
         context['enviados'] = mensajes.filter(estado='ENVIADO').count()
+        context['entregados'] = mensajes.filter(estado='ENTREGADO').count()
         context['leidos'] = mensajes.filter(estado='LEIDO').count()
         context['pendientes'] = mensajes.filter(estado='PENDIENTE').count()
         context['errores'] = mensajes.filter(estado='ERROR').count()
@@ -528,12 +586,15 @@ class PipelineBoardView(GestorCrmMixin, TemplateView):
         # Agrupar contactos por etapa
         columnas = []
         for e in etapas:
-            contactos_en_etapa = CrmContact.objects.filter(etapa_comercial=e['id']).order_by('-fecha_registro')
+            contactos_en_etapa = CrmContact.objects.filter(etapa_comercial=e['id']).exclude(es_proveedor=True).order_by('-fecha_registro')
             columnas.append({
                 'etapa': e,
                 'contactos': contactos_en_etapa
             })
             
+        from .models import CrmConfig, CrmMediaTemplate
+        context['crm_config'] = CrmConfig.get_solo()
+        context['media_templates'] = CrmMediaTemplate.objects.all()
         context['columnas'] = columnas
         return context
 
@@ -559,4 +620,12 @@ class UpdateContactStageAPIView(GestorCrmMixin, View):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
-
+@method_decorator(csrf_exempt, name='dispatch')
+class ToggleProveedorAPIView(GestorCrmMixin, View):
+    """Activa o desactiva la bandera de proveedor de un contacto"""
+    def post(self, request, pk, *args, **kwargs):
+        from django.shortcuts import get_object_or_404
+        contacto = get_object_or_404(CrmContact, pk=pk)
+        contacto.es_proveedor = not contacto.es_proveedor
+        contacto.save(update_fields=['es_proveedor'])
+        return JsonResponse({'status': 'ok', 'es_proveedor': contacto.es_proveedor})

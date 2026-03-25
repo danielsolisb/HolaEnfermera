@@ -87,9 +87,21 @@
                     </div>
                 </div>
 
-                <hr class="new-section-xs">
+                </div>
 
                 <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group pad-top">
+                            <div class="checkbox">
+                                <label class="form-checkbox form-normal form-warning">
+                                    {% render_field form.es_proveedor %} <strong class="text-danger"><i class="fa fa-briefcase"></i> {{ form.es_proveedor.label }}</strong>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="new-section-xs">                <div class="row">
                     <div class="col-sm-6">
                         <div class="form-group">
                             <label class="control-label">{{ form.ciudad.label }}</label>

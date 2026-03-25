@@ -65,6 +65,7 @@
                                         <a href="{% url 'crm_marketing:campaign_preview' campana.pk %}" class="btn btn-xs btn-success"><i class="fa fa-paper-plane"></i> Lanzar / Preview</a>
                                     {% endif %}
                                     <a href="{% url 'crm_marketing:campaign_report' campana.pk %}" class="btn btn-xs btn-default"><i class="fa fa-bar-chart"></i> Reporte</a>
+                                    <a href="{% url 'crm_marketing:campaign_delete' campana.pk %}" class="btn btn-xs btn-danger"><i class="demo-pli-recycling"></i></a>
                                 </td>
                             </tr>
                             {% empty %}

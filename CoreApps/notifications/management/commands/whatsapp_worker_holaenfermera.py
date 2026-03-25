@@ -125,8 +125,19 @@ class Command(BaseCommand):
                             telefono = msg.contacto.telefono
                             plantilla = msg.campana.mensaje_plantilla
                             
-                            # Reemplazos dinámicos
-                            texto_final = plantilla.replace('{nombres}', msg.contacto.nombres)
+                            # Reemplazos dinámicos avanzados
+                            datos_contacto = {
+                                '{nombres}': msg.contacto.nombres or '',
+                                '{apellidos}': msg.contacto.apellidos or '',
+                                '{ciudad}': msg.contacto.ciudad.nombre if msg.contacto.ciudad else '',
+                                '{farmacia}': msg.contacto.farmacia_origen.nombre if msg.contacto.farmacia_origen else '',
+                                '{telefono}': msg.contacto.telefono or '',
+                            }
+                            
+                            texto_final = plantilla
+                            for tag, valor in datos_contacto.items():
+                                if tag in texto_final:
+                                    texto_final = texto_final.replace(tag, valor)
                             
                             self.stdout.write(f"   👉 Campaña ({msg.campana.nombre}) a {telefono}...")
                             

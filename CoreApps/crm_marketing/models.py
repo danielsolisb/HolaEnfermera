@@ -41,13 +41,15 @@ class CrmContact(models.Model):
     # Identidad
     nombres = models.CharField(max_length=150, verbose_name="Nombres")
     apellidos = models.CharField(max_length=150, verbose_name="Apellidos")
-    cedula = models.CharField(max_length=20, blank=True, null=True, verbose_name="Cédula/RUC")
+    cedula = models.CharField(max_length=20, unique=True, blank=True, null=True, verbose_name="Cédula/RUC")
     fecha_nacimiento = models.DateField(blank=True, null=True, verbose_name="Fecha de Nacimiento")
     es_edad_estimada = models.BooleanField(default=False, help_text="True si no se dio fecha exacta y se calculó el año base a su edad proporcionada.")
 
     
     # Contacto
-    telefono = models.CharField(max_length=20, verbose_name="Teléfono (WhatsApp)")
+    telefono = models.CharField(max_length=20, unique=True, null=True, blank=True, verbose_name="Teléfono (WhatsApp)")
+    whatsapp_jid = models.CharField(max_length=150, blank=True, null=True, verbose_name="WhatsApp JID")
+    whatsapp_lid = models.CharField(max_length=150, blank=True, null=True, verbose_name="WhatsApp LID (Linked Device ID)")
     email = models.EmailField(blank=True, null=True, verbose_name="Correo Electrónico")
     
     # Ubicación (Relacionado a main.Ciudad)
@@ -79,7 +81,30 @@ class CrmContact(models.Model):
         help_text="Usuario real del ERP/App si fue convertido."
     )
 
+    es_organico = models.BooleanField(default=False, verbose_name="¿Es Orgánico? (WhatsApp)")
+    es_proveedor = models.BooleanField(default=False, verbose_name="Es Proveedor (Oculto de Pipeline)")
     fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    # Trazabilidad de Respuesta (KPIs)
+    fecha_creacion_lead = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Creación del Lead")
+    fecha_primer_contacto = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Primer Contacto")
+    tiempo_respuesta_inicial = models.DurationField(null=True, blank=True, verbose_name="Tiempo de Respuesta Inicial")
+
+    @property
+    def is_hidden_number(self):
+        """Verifica si el número almacenado es en realidad un LID de WhatsApp."""
+        if self.whatsapp_jid and '@lid' in self.whatsapp_jid:
+            return True
+        if self.telefono and len(self.telefono) > 13 and (self.telefono.startswith('+1') or self.telefono.startswith('+2') or self.telefono.startswith('+6')):
+            return True
+        return False
+
+    @property
+    def display_phone(self):
+        """Retorna el teléfono o 'Número Oculto' si es un LID."""
+        if self.is_hidden_number:
+            return "Número Oculto"
+        return self.telefono
 
     class Meta:
         verbose_name = "Contacto CRM"
@@ -88,6 +113,37 @@ class CrmContact(models.Model):
 
     def __str__(self):
         return f"{self.nombres} {self.apellidos} ({self.telefono})"
+
+    def save(self, *args, **kwargs):
+        # En MySQL, unique=True permite múltiples NULLs pero no múltiples cadenas vacías.
+        # Convertimos cadenas vacías a None para permitir contactos sin teléfono/cédula.
+        if self.telefono == "":
+            self.telefono = None
+        if self.cedula == "":
+            self.cedula = None
+        super().save(*args, **kwargs)
+
+    def get_sangre_fria_info(self):
+        """Calcula si el lead está en 'sangre fría' (excedió tiempo de respuesta)"""
+        if self.etapa_comercial != 'LEAD' or not self.fecha_creacion_lead or self.fecha_primer_contacto:
+            return {'exceeded': False, 'minutes': 0}
+        
+        from django.utils import timezone
+        from .models import CrmConfig
+        config = CrmConfig.get_solo()
+        
+        diff = timezone.now() - self.fecha_creacion_lead
+        minutes = int(diff.total_seconds() / 60)
+        
+        return {
+            'exceeded': minutes >= config.tiempo_alerta_leads,
+            'minutes': minutes,
+            'limit': config.tiempo_alerta_leads
+        }
+
+    def get_campanas_nombres(self):
+        """Devuelve una lista de nombres de campañas en las que ha participado"""
+        return list(self.mensajes_campana.all().values_list('campana__nombre', flat=True).distinct())
 
 class CampanaDifusion(models.Model):
     ESTADOS = [
@@ -188,7 +244,8 @@ class MensajeCampana(models.Model):
     ESTADOS = [
         ('PENDIENTE', 'Pendiente de Envío'),
         ('ENVIADO', 'Enviado (API)'),
-        ('LEIDO', 'Leído (Doble Check)'),
+        ('ENTREGADO', 'Entregado (Check Gris)'),
+        ('LEIDO', 'Leído (Check Azul)'),
         ('ERROR', 'Error de Envío')
     ]
     campana = models.ForeignKey(CampanaDifusion, on_delete=models.CASCADE, related_name='mensajes_cola')
@@ -209,3 +266,43 @@ class MensajeCampana(models.Model):
         
     def __str__(self):
         return f"MSG: {self.campana.nombre} -> {self.contacto.telefono} [{self.estado}]"
+
+
+class CrmConfig(models.Model):
+    """Configuración global del CRM (Single Row)"""
+    tiempo_alerta_leads = models.PositiveIntegerField(default=30, help_text="Tiempo en minutos para resaltar leads sin atender")
+    respuestas_rapidas = models.JSONField(default=list, help_text="Lista de objetos { 'label': '...', 'text': '...' }")
+    
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuración CRM"
+        verbose_name_plural = "Configuraciones CRM"
+
+    def __str__(self):
+        return "Configuración Global del CRM"
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(id=1)
+        return obj
+
+class CrmMediaTemplate(models.Model):
+    """Plantillas de archivos multimedia (Cuentas bancarias, promociones, etc.)"""
+    MEDIA_TYPES = [
+        ('IMAGE', 'Imagen'),
+        ('VIDEO', 'Video'),
+        ('DOCUMENT', 'Documento/PDF'),
+    ]
+    nombre = models.CharField(max_length=100, verbose_name="Nombre de la Plantilla (Ej: Cuenta Banco)")
+    archivo = models.FileField(upload_to='crm/templates/', verbose_name="Archivo Multimedia")
+    tipo = models.CharField(max_length=20, choices=MEDIA_TYPES, default='IMAGE')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Plantilla Multimedia"
+        verbose_name_plural = "Plantillas Multimedia"
+        ordering = ['-fecha_creacion']
+        
+    def __str__(self):
+        return f"{self.nombre} ({self.get_tipo_display()})"

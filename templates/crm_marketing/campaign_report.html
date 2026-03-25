@@ -37,6 +37,10 @@
                         Leídos (DOBLE CHECK ✅)
                     </li>
                     <li class="list-group-item">
+                        <span class="badge badge-mint">{{ entregados }}</span>
+                        Entregados (Doble Check Gris)
+                    </li>
+                    <li class="list-group-item">
                         <span class="badge badge-info">{{ enviados }}</span>
                         Enviados (Sin leer)
                     </li>
@@ -80,9 +84,11 @@
                                     {% if msj.estado == 'PENDIENTE' %}
                                         <span class="label label-warning">PENDIENTE</span>
                                     {% elif msj.estado == 'ENVIADO' %}
-                                        <span class="label label-info">ENVIADO</span>
+                                        <span class="label label-info">ENVIADO (API)</span>
+                                    {% elif msj.estado == 'ENTREGADO' %}
+                                        <span class="label label-dark">ENTREGADO (Gris)</span>
                                     {% elif msj.estado == 'LEIDO' %}
-                                        <span class="label label-success">LEIDO ✅</span>
+                                        <span class="label label-success">LEIDO (Azul) ✅</span>
                                     {% elif msj.estado == 'ERROR' %}
                                         <span class="label label-danger" title="{{ msj.error_log }}">ERROR ❌</span>
                                     {% endif %}

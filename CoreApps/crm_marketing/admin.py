@@ -1,5 +1,15 @@
 from django.contrib import admin
-from .models import Farmacia, Etiqueta, CrmContact, CampanaDifusion, DiffusionLog, ProductoCRM
+from .models import Farmacia, Etiqueta, CrmContact, CampanaDifusion, DiffusionLog, ProductoCRM, CrmConfig, MensajeCampana, CrmMediaTemplate
+
+
+@admin.register(CrmConfig)
+class CrmConfigAdmin(admin.ModelAdmin):
+    list_display = ('id', 'tiempo_alerta_leads', 'fecha_actualizacion')
+
+@admin.register(MensajeCampana)
+class MensajeCampanaAdmin(admin.ModelAdmin):
+    list_display = ('campana', 'contacto', 'estado', 'fecha_actualizacion')
+    list_filter = ('estado', 'campana')
 
 
 @admin.register(Farmacia)
@@ -49,3 +59,9 @@ class DiffusionLogAdmin(admin.ModelAdmin):
     list_display = ('campana', 'contacto', 'enviado_con_exito', 'fecha_envio')
     search_fields = ('campana__nombre', 'contacto__nombres', 'contacto__apellidos', 'contacto__telefono')
     list_filter = ('enviado_con_exito', 'campana')
+
+@admin.register(CrmMediaTemplate)
+class CrmMediaTemplateAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'tipo', 'archivo', 'fecha_creacion')
+    list_filter = ('tipo',)
+    search_fields = ('nombre',)

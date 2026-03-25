@@ -1,0 +1,254 @@
+{% extends 'layouts/dashboard_base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Configuración CRM | Hola Enfermera{% endblock %}
+{% block page_title %}Configuración Global del CRM{% endblock %}
+
+{% block breadcrumb %}
+    <li>Gestión Comercial</li>
+    <li class="active">Configuración CRM</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 col-lg-offset-2">
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title"><i class="demo-pli-gear"></i> Ajustes de Automatización y Mensajes</h3>
+            </div>
+            
+            <form method="POST" class="panel-body" id="crm-config-form">
+                {% csrf_token %}
+                
+                <!-- Tiempo de Alerta -->
+                <div class="form-group pad-ver">
+                    <label class="control-label text-main text-bold">Tiempo de Alerta "Sangre Fría"</label>
+                    <p class="text-muted small">Define cuántos minutos puede estar un lead sin respuesta antes de que el sistema lo marque como urgente.</p>
+                    <div class="input-group" style="max-width: 250px;">
+                        {% render_field form.tiempo_alerta_leads class="form-control" placeholder="30" %}
+                        <span class="input-group-addon">minutos</span>
+                    </div>
+                </div>
+
+                <hr class="new-section-xs">
+
+                <!-- Respuestas Rápidas -->
+                <div class="form-group">
+                    <label class="control-label text-main text-bold">Plantillas de Respuesta Rápida</label>
+                    <p class="text-muted small">Define aquí los mensajes frecuentes que aparecerán como botones rápidos en el chat.</p>
+                    
+                    <div id="replies-container" class="mar-top">
+                        <!-- Listado dinámico -->
+                    </div>
+                    
+                    <button type="button" class="btn btn-sm btn-success mar-top" id="add-reply">
+                        <i class="demo-pli-add"></i> Añadir Nueva Plantilla
+                    </button>
+                    
+                    <!-- Campo oculto que guardará el JSON real -->
+                    <div style="display:none;">
+                        {% render_field form.respuestas_rapidas id="id_respuestas_rapidas" %}
+                    </div>
+                </div>
+
+                <div class="text-right mar-top">
+                    <hr>
+                    <button class="btn btn-primary btn-lg" type="submit" id="save-config">
+                        <i class="demo-pli-save-3"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Nueva Sección: Plantillas Multimedia -->
+        <div class="panel">
+            <div class="panel-heading">
+                <h3 class="panel-title"><i class="demo-pli-photo-2"></i> Plantillas Multimedia (Adjuntos)</h3>
+            </div>
+            <div class="panel-body">
+                <p class="text-muted small">Sube imágenes de cuentas bancarias, promociones o videos para enviarlos rápidamente en el chat.</p>
+                
+                <div class="row mar-top">
+                    {% for media in media_templates %}
+                    <div class="col-sm-4">
+                        <div class="panel panel-bordered panel-muted text-center">
+                            <div class="panel-body pad-all">
+                                {% if media.tipo == 'IMAGE' %}
+                                    <div class="img-thumbnail mar-btm" style="height: 80px; width: 80px; overflow: hidden; display:inline-block;">
+                                        <img src="{{ media.archivo.url }}" style="height: 100%; width: 100%; object-fit: cover;">
+                                    </div>
+                                {% elif media.tipo == 'VIDEO' %}
+                                    <i class="demo-pli-video icon-3x text-primary mar-btm"></i>
+                                {% else %}
+                                    <i class="demo-pli-file-html icon-3x text-info mar-btm"></i>
+                                {% endif %}
+                                <p class="text-bold mar-no truncate">{{ media.nombre }}</p>
+                                <small class="text-muted">{{ media.get_tipo_display }}</small>
+                                <div class="mar-top">
+                                    <a href="{% url 'crm_marketing:media_template_delete' media.id %}" class="btn btn-xs btn-danger btn-icon btn-circle" onclick="return confirm('¿Eliminar esta plantilla?')">
+                                        <i class="demo-pli-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-xs-12">
+                        <div class="well well-sm text-center">No hay archivos multimedia cargados.</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="text-center mar-top">
+                    <button type="button" class="btn btn-info btn-labeled" data-toggle="modal" data-target="#modal-upload-media">
+                        <span class="btn-label"><i class="demo-pli-upload"></i></span> Subir Nuevo Archivo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Carga -->
+<div class="modal fade" id="modal-upload-media" role="dialog" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><i class="pms-pli-cross"></i></button>
+                <h4 class="modal-title">Subir Nueva Plantilla Multimedia</h4>
+            </div>
+            <form action="{% url 'crm_marketing:media_template_create' %}" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group mar-btm">
+                        <label class="control-label text-bold">Nombre descriptivo</label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej: Cuenta Banco de Guayaquil" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="form-group mar-btm">
+                                <label class="control-label text-bold">Tipo de Archivo</label>
+                                <select name="tipo" class="form-control">
+                                    <option value="IMAGE">Imagen (JPG/PNG)</option>
+                                    <option value="VIDEO">Video (MP4)</option>
+                                    <option value="DOCUMENT">Documento (PDF/Doc)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="form-group mar-btm">
+                                <label class="control-label text-bold">Seleccionar Archivo</label>
+                                <input type="file" name="archivo" class="form-control" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary">Subir y Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .reply-item {
+        background: #f9f9f9;
+        border-left: 4px solid #3366cc;
+        transition: all 0.3s;
+    }
+    .reply-item:hover {
+        background: #f0f4f9;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('replies-container');
+    const hiddenInput = document.getElementById('id_respuestas_rapidas');
+    const addButton = document.getElementById('add-reply');
+    const form = document.getElementById('crm-config-form');
+
+    // Cargar datos iniciales
+    let replies = [];
+    try {
+        let val = hiddenInput.value;
+        if (typeof val === 'string' && val.trim() !== '') {
+            replies = JSON.parse(val);
+        } else {
+            replies = [];
+        }
+    } catch(e) { 
+        console.error("Error parsing JSON:", e);
+        replies = []; 
+    }
+
+    function syncReplies() {
+        const updatedReplies = [];
+        container.querySelectorAll('.reply-item').forEach(panel => {
+            const label = panel.querySelector('.reply-label').value.trim();
+            const text = panel.querySelector('.reply-text').value.trim();
+            updatedReplies.push({ label, text });
+        });
+        replies = updatedReplies;
+    }
+
+    function renderReplies() {
+        container.innerHTML = '';
+        if (replies.length === 0) {
+            container.innerHTML = '<p class="text-muted italic">No hay plantillas configuradas. Haz clic en añadir.</p>';
+            return;
+        }
+
+        replies.forEach((reply, index) => {
+            const div = document.createElement('div');
+            div.className = 'panel panel-bordered reply-item mar-btm';
+            div.innerHTML = `
+                <div class="panel-body pad-all">
+                    <div class="row">
+                        <div class="col-sm-4">
+                            <label class="small text-bold">Etiqueta del Botón</label>
+                            <input type="text" class="form-control reply-label" placeholder="Ej: Bienvenida" value="${reply.label || ''}" data-index="${index}">
+                        </div>
+                        <div class="col-sm-7">
+                            <label class="small text-bold">Mensaje a Enviar</label>
+                            <textarea class="form-control reply-text" rows="2" placeholder="Escribe el mensaje aquí..." data-index="${index}">${reply.text || ''}</textarea>
+                        </div>
+                        <div class="col-sm-1 text-right pad-top">
+                            <button type="button" class="btn btn-danger btn-icon btn-circle remove-reply" data-index="${index}" title="Eliminar">
+                                <i class="demo-pli-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    addButton.addEventListener('click', function() {
+        syncReplies();
+        replies.push({ label: '', text: '' });
+        renderReplies();
+    });
+
+    container.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('.remove-reply');
+        if (removeBtn) {
+            syncReplies();
+            const index = parseInt(removeBtn.dataset.index);
+            replies.splice(index, 1);
+            renderReplies();
+        }
+    });
+
+    form.addEventListener('submit', function(e) {
+        syncReplies();
+        hiddenInput.value = JSON.stringify(replies);
+    });
+
+    renderReplies();
+});
+</script>
+{% endblock %}
