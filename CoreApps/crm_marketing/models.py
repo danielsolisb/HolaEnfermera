@@ -68,8 +68,10 @@ class CrmContact(models.Model):
         ('NEGOCIACION', 'En Negociación'),
         ('GANADO', 'Venta Cerrada (Éxito)'),
         ('PERDIDO', 'Venta Perdida'),
+        ('DESCARTADO', 'Descartado / Competencia'),
     ]
     etapa_comercial = models.CharField(max_length=20, choices=ETAPAS_CHOICES, default='LEAD', verbose_name="Etapa del Pipeline")
+    fecha_ultima_actividad = models.DateTimeField(null=True, blank=True, verbose_name="Fecha última actividad")
 
     
     # Transformación a App principal

@@ -161,6 +161,16 @@
 
 {% block content %}
 <div class="row">
+    <div class="col-sm-12 text-right mar-btm">
+        <span class="mar-rgt text-muted">Mostrar bloqueados hace:</span>
+        <div class="btn-group">
+            <a href="?dias=7" class="btn btn-sm {% if dias_seleccionados == '7' %}btn-primary{% else %}btn-default{% endif %}">7 Días</a>
+            <a href="?dias=15" class="btn btn-sm {% if dias_seleccionados == '15' %}btn-primary{% else %}btn-default{% endif %}">15 Días</a>
+            <a href="?dias=30" class="btn btn-sm {% if dias_seleccionados == '30' %}btn-primary{% else %}btn-default{% endif %}">30 Días</a>
+            <a href="?dias=todo" class="btn btn-sm {% if dias_seleccionados == 'todo' %}btn-primary{% else %}btn-default{% endif %}">Ver Todo</a>
+        </div>
+    </div>
+
     <div class="col-sm-12">
         <div class="pipeline-wrapper" id="pipeline-container">
             
@@ -219,6 +229,12 @@
                                   <i class="fa fa-comment"></i>
                               </button>
                               <a href="{% url 'chat:inbox' %}?contact_id={{ contacto.id }}" class="btn btn-xs btn-success btn-icon" title="Ir al Inbox Full"><i class="fab fa-whatsapp"></i></a>
+                              <button type="button" class="btn btn-xs btn-danger btn-icon btn-discard-contact" 
+                                      data-id="{{ contacto.id }}" 
+                                      data-name="{{ contacto.nombres|escapejs }}"
+                                      title="Descartar / Competencia">
+                                  <i class="fa fa-trash-alt"></i>
+                              </button>
                          </div>
                     </div>
                     {% endwith %}
@@ -449,6 +465,35 @@
             }
         });
     }
+
+    // Event listener para descartar contactos (Competencia)
+    $(document).on('click', '.btn-discard-contact', function() {
+        const btn = $(this);
+        const contactId = btn.data('id');
+        const contactName = btn.data('name');
+        
+        if (confirm(`¿Estás seguro de que deseas descartar a "${contactName}"? \n\nEsta acción quitará al contacto del pipeline porque lo consideras competencia o no calificado.`)) {
+            $.ajax({
+                url: `/crm/contactos/${contactId}/descartar/`,
+                type: 'POST',
+                headers: {"X-CSRFToken": "{{ csrf_token }}"},
+                success: function(resp) {
+                    if (resp.status === 'ok') {
+                        // Eliminar la tarjeta del DOM con efecto
+                        btn.closest('.card').fadeOut(300, function() {
+                            $(this).remove();
+                            updateCounts();
+                        });
+                    } else {
+                        alert("Error al descartar: " + (resp.error || "Desconocido"));
+                    }
+                },
+                error: function() {
+                    alert("Error de conexión al intentar descartar.");
+                }
+            });
+        }
+    });
 
     function updateLeadStage(contactId, etapa) {
         fetch("{% url 'crm_marketing:api_update_stage' %}", {

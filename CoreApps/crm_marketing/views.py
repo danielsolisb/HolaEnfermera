@@ -575,6 +575,21 @@ class PipelineBoardView(GestorCrmMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Parámetro de días (Default 7)
+        dias_param = self.request.GET.get('dias', '7')
+        umbral_recencia = None
+        
+        if dias_param != 'todo':
+            try:
+                num_dias = int(dias_param)
+                umbral_recencia = timezone.now() - timedelta(days=num_dias)
+            except ValueError:
+                umbral_recencia = timezone.now() - timedelta(days=7)
+                dias_param = '7'
+        
         etapas = [
             {'id': 'LEAD', 'nombre': 'Lead Entrante'},
             {'id': 'CONTACTADO', 'nombre': 'Primer Contacto'},
@@ -586,7 +601,18 @@ class PipelineBoardView(GestorCrmMixin, TemplateView):
         # Agrupar contactos por etapa
         columnas = []
         for e in etapas:
-            contactos_en_etapa = CrmContact.objects.filter(etapa_comercial=e['id']).exclude(es_proveedor=True).order_by('-fecha_registro')
+            # Filtro base: Quitar proveedores y descartados
+            queryset = CrmContact.objects.filter(etapa_comercial=e['id']).exclude(es_proveedor=True)
+            
+            # Filtro de recencia (Solo si umbral_recencia existe)
+            if umbral_recencia:
+                from django.db.models import Q
+                queryset = queryset.filter(
+                    Q(fecha_ultima_actividad__gte=umbral_recencia) | 
+                    Q(fecha_ultima_actividad__isnull=True)
+                )
+            
+            contactos_en_etapa = queryset.order_by('-fecha_registro')
             columnas.append({
                 'etapa': e,
                 'contactos': contactos_en_etapa
@@ -596,7 +622,18 @@ class PipelineBoardView(GestorCrmMixin, TemplateView):
         context['crm_config'] = CrmConfig.get_solo()
         context['media_templates'] = CrmMediaTemplate.objects.all()
         context['columnas'] = columnas
+        context['dias_seleccionados'] = dias_param
         return context
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ToggleDescartadoAPIView(GestorCrmMixin, View):
+    """Mueve un contacto a la etapa DESCARTADO para quitarlo del pipeline visual"""
+    def post(self, request, pk, *args, **kwargs):
+        from django.shortcuts import get_object_or_404
+        contacto = get_object_or_404(CrmContact, pk=pk)
+        contacto.etapa_comercial = 'DESCARTADO'
+        contacto.save(update_fields=['etapa_comercial'])
+        return JsonResponse({'status': 'ok', 'new_stage': 'DESCARTADO'})
 
 @method_decorator(csrf_exempt, name='dispatch')
 class UpdateContactStageAPIView(GestorCrmMixin, View):

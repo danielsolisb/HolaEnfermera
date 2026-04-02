@@ -31,6 +31,7 @@ urlpatterns = [
     path('pipeline/', views.PipelineBoardView.as_view(), name='pipeline_board'),
     path('pipeline/update-stage/', views.UpdateContactStageAPIView.as_view(), name='api_update_stage'),
     path('contactos/<int:pk>/toggle-proveedor/', views.ToggleProveedorAPIView.as_view(), name='toggle_proveedor'),
+    path('contactos/<int:pk>/descartar/', views.ToggleDescartadoAPIView.as_view(), name='contact_discard'),
     path('contactos/<int:pk>/eliminar/', views.CrmContactDeleteView.as_view(), name='contact_delete'),
     
     # Configuración Global y Multimedia

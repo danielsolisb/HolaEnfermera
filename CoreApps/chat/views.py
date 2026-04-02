@@ -344,26 +344,33 @@ class WasenderWebhookView(View):
                     if updated_fields:
                         contacto.save(update_fields=updated_fields)
 
-                # --- Lógica de Autonomía y Trazabilidad (Fase 25) ---
+                # --- Lógica de Autonomía y Trazabilidad (Fase 25 y 33) ---
                 now = timezone.now()
-                contact_updated = False
+                contacto.fecha_ultima_actividad = now
+                contact_updated = True
                 
                 if not from_me:
-                    # Mensaje ENTRANTE: Marcar inicio de Lead si no lo tiene
+                    # Mensaje ENTRANTE: 
+                    # 1. Marcar inicio de Lead si no lo tiene
                     if not contacto.fecha_creacion_lead:
                         contacto.fecha_creacion_lead = now
-                        contact_updated = True
+                    
+                    # 2. Lógica de Re-Apertura (Fase 33)
+                    # Si el contacto estaba en una etapa finalizada y vuelve a escribir, lo regresamos a Lead
+                    etapas_finales = ['GANADO', 'PERDIDO', 'DESCARTADO']
+                    if contacto.etapa_comercial in etapas_finales:
+                        contacto.etapa_comercial = 'LEAD'
+                        contacto.fecha_creacion_lead = now # Reiniciar contador de sangre fría para el nuevo interés
+                        contacto.fecha_primer_contacto = None # Resetear para medir nueva respuesta
                 else:
                     # Mensaje SALIENTE (Desde CRM o Móvil): Mover etapa y registrar respuesta
                     if contacto.etapa_comercial == 'LEAD':
                         contacto.etapa_comercial = 'CONTACTADO'
-                        contact_updated = True
                     
                     if not contacto.fecha_primer_contacto:
                         contacto.fecha_primer_contacto = now
                         if contacto.fecha_creacion_lead:
                             contacto.tiempo_respuesta_inicial = now - contacto.fecha_creacion_lead
-                        contact_updated = True
 
                 if contact_updated:
                     contacto.save()
